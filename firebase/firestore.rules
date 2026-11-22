@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// Bounce Lab security rules.
+// Paste this whole file into Firebase console → Firestore Database → Rules → Publish.
+// These rules ONLY cover the bouncelab_games collection. If your Firebase project already
+// has rules for other games, see docs/SETUP.md step 4 for how to merge them.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ▼▼▼ Put your admin Google email(s) here, lowercase (same as lab/config.js → adminEmails) ▼▼▼
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['you@example.com'];
+    }
+
+    function validGame(game) { return game.matches('^[a-z0-9_-]{1,40}$'); }
+    function d() { return request.resource.data; }
+    function okVersion() { return !('v' in d()) || (d().v is string && d().v.size() <= 20); }
+    // counters may only move by small steps (stops someone setting plays to 1,000,000)
+    function step(f, lo, hi) {
+      return d().get(f, 0) is int
+        && d().get(f, 0) - resource.data.get(f, 0) >= lo
+        && d().get(f, 0) - resource.data.get(f, 0) <= hi;
+    }
+    function counterKeys() { return ['plays', 'ratingSum', 'ratingCount', 'r1', 'r2', 'r3', 'r4', 'r5']; }
+
+    match /bouncelab_games/{game} {
+      // per-game summary: play count + rating totals (shown in the lobby)
+      allow read: if true;
+      allow create: if validGame(game)
+        && d().keys().hasOnly(counterKeys())
+        && d().get('plays', 0) <= 1 && d().get('ratingCount', 0) <= 1 && d().get('ratingSum', 0) <= 5
+        && d().get('r1', 0) <= 1 && d().get('r2', 0) <= 1 && d().get('r3', 0) <= 1 && d().get('r4', 0) <= 1 && d().get('r5', 0) <= 1;
+      allow update: if d().keys().hasOnly(counterKeys())
+        && step('plays', 0, 1) && step('ratingCount', 0, 1) && step('ratingSum', -4, 5)
+        && step('r1', -1, 1) && step('r2', -1, 1) && step('r3', -1, 1) && step('r4', -1, 1) && step('r5', -1, 1);
+      allow delete: if isAdmin();
+
+      // leaderboard: anyone can read and add; only admin can delete
+      match /scores/{id} {
+        allow read: if true;
+        allow create: if validGame(game)
+          && d().keys().hasOnly(['name', 'score', 'v', 'stats', 'device', 'ts'])
+          && d().name is string && d().name.size() > 0 && d().name.size() <= 16
+          && d().score is int && d().score >= 0 && d().score < 100000000
+          && d().stats is map && d().stats.size() <= 10
+          && d().device is string && d().device.size() <= 40
+          && d().ts == request.time
+          && okVersion();
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      // feedback: anyone can send, only admin can read
+      match /feedback/{id} {
+        allow create: if validGame(game)
+          && d().keys().hasOnly(['stars', 'text', 'name', 'v', 'score', 'device', 'ua', 'ts'])
+          && (d().stars == null || (d().stars is int && d().stars >= 1 && d().stars <= 5))
+          && d().text is string && d().text.size() <= 1000
+          && d().name is string && d().name.size() <= 16
+          && (d().score == null || d().score is int)
+          && d().device is string && d().device.size() <= 40
+          && d().ua is string && d().ua.size() <= 200
+          && d().ts == request.time
+          && okVersion();
+        allow read, delete: if isAdmin();
+        allow update: if false;
+      }
+
+      // play sessions (one per finished run): anyone can add, only admin can read
+      match /sessions/{id} {
+        allow create: if validGame(game)
+          && d().keys().hasOnly(['score', 'dur', 'v', 'device', 'ts'])
+          && d().score is int && d().score >= 0
+          && d().dur is int && d().dur >= 0 && d().dur < 86400
+          && d().device is string && d().device.size() <= 40
+          && d().ts == request.time
+          && okVersion();
+        allow read, delete: if isAdmin();
+        allow update: if false;
+      }
+    }
+  }
+}

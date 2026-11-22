@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Template · Bounce Lab</title>
+<!-- ▼ THE ONE LINE that connects a game to the lab. Change data-game to this folder's name. -->
+<script src="../../lab/lab.js" data-game="_template" data-version="v1"></script>
+<style>
+  html,body{margin:0;height:100%;background:#05070f;overflow:hidden;color:#e8f6ff;font:600 16px system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+  canvas{display:block;width:100%;height:100%}
+  #ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;pointer-events:none}
+  #ui h1{margin:0;font-size:34px;letter-spacing:.2em;color:#5ef2ff;text-shadow:0 0 20px #5ef2ff}
+  #score{position:fixed;top:max(16px,env(safe-area-inset-top));left:0;right:0;text-align:center;font-size:40px;font-weight:900}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="score"></div>
+<div id="ui"><h1>KEEPY UPPY</h1><div>Tap the ball to kick it up.<br>Don't let it touch the floor.</div><div id="msg">Tap to start</div></div>
+<script>
+// A tiny example game showing the two lab hooks: BounceLab.start() and BounceLab.gameOver(score).
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W, H, ball, score = 0, state = 'title';
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+addEventListener('resize', resize); resize();
+function start() {
+  ball = { x: W / 2, y: H * 0.4, vx: 0, vy: -600, r: Math.min(W, H) * 0.07 };
+  score = 0; state = 'play'; document.getElementById('ui').style.display = 'none';
+  window.BounceLab && BounceLab.start();                 // ◀ hook 1: a run started
+}
+function over() {
+  state = 'over';
+  document.getElementById('msg').textContent = 'Score ' + score + ' · tap to retry';
+  document.getElementById('ui').style.display = 'flex';
+  window.BounceLab && BounceLab.gameOver(score, { kicks: score });   // ◀ hook 2: a run ended
+}
+addEventListener('pointerdown', e => {
+  if (state !== 'play') return start();
+  const dx = e.clientX - ball.x, dy = e.clientY - ball.y;
+  if (Math.hypot(dx, dy) < ball.r * 1.8) { ball.vy = -H * 1.3; ball.vx = -dx * 6; score++; }
+});
+let last = performance.now();
+(function loop(now) {
+  const dt = Math.min(0.033, (now - last) / 1000); last = now;
+  ctx.fillStyle = '#05070f'; ctx.fillRect(0, 0, W, H);
+  if (state === 'play') {
+    ball.vy += H * 2 * dt; ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+    if (ball.x < ball.r || ball.x > W - ball.r) { ball.vx *= -0.9; ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x)); }
+    if (ball.y > H - ball.r) over();
+  }
+  if (ball) { ctx.shadowColor = '#5ef2ff'; ctx.shadowBlur = 30; ctx.fillStyle = '#5ef2ff'; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }
+  document.getElementById('score').textContent = state === 'play' ? score : '';
+  requestAnimationFrame(loop);
+})(last);
+</script>
+</body>
+</html>

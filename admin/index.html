@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Bounce Lab · Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--cy:#5ef2ff;--mg:#ff4fd8;--gd:#ffd84a;--bg:#060912;--card:#0c1222;--line:rgba(140,220,255,.14);--txt:#e6f3fb;--dim:#8aa0b3;--red:#ff6b7d}
+body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) 16px 40px}
+a{color:var(--cy)}
+button,select,input{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+h1{font:900 22px Orbitron,system-ui,sans-serif;letter-spacing:.14em;background:linear-gradient(90deg,var(--cy),var(--mg));-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 small{font-size:11px;letter-spacing:.3em;-webkit-text-fill-color:var(--dim);margin-left:8px}
+.sp{flex:1}
+.pill{padding:5px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--dim)}
+.pill.ok{color:#7dffb2;border-color:rgba(125,255,178,.4)}.pill.warn{color:var(--gd);border-color:rgba(255,216,74,.4)}
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--cy)}.btn.pri{background:var(--cy);color:#041016;border-color:var(--cy);font-weight:700}
+select{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.gate{max-width:420px;margin:12vh auto;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px}
+.gate p{color:var(--dim);margin:10px 0 18px}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi b{display:block;font:800 26px Orbitron,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--dim);font-size:12px}
+.games{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.card h2{font:800 15px Orbitron,system-ui,sans-serif;letter-spacing:.1em;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card h2 i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+.card h2 small{font:600 11px system-ui;color:var(--dim);letter-spacing:0;margin-left:auto}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.mini div{background:rgba(255,255,255,.03);border-radius:10px;padding:8px}
+.mini b{display:block;font:800 16px Orbitron,system-ui,sans-serif}
+.mini span{font-size:11px;color:var(--dim)}
+.dist{display:grid;gap:3px;margin:6px 0 12px}
+.dist div{display:grid;grid-template-columns:22px 1fr 30px;gap:6px;align-items:center;font-size:12px;color:var(--dim)}
+.dist .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.dist .bar span{display:block;height:100%;background:var(--gd)}
+.spark{width:100%;height:56px;display:block;margin:4px 0 12px}
+h3{font:700 10px Orbitron,system-ui,sans-serif;letter-spacing:.22em;color:var(--dim);margin:10px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 6px;text-align:left;border-bottom:1px solid rgba(255,255,255,.04)}
+th{color:var(--dim);font-weight:600;font-size:11px}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.del{opacity:.4;cursor:pointer;background:none;border:0;color:var(--red)}.del:hover{opacity:1}
+.feed .item{border-bottom:1px solid var(--line);padding:12px 2px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}
+.feed .tag{font:700 10px Orbitron,system-ui,sans-serif;letter-spacing:.1em;padding:4px 7px;border-radius:7px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);white-space:nowrap}
+.feed .st{color:var(--gd);letter-spacing:1px}
+.feed .meta{color:var(--dim);font-size:12px;margin-top:3px}
+.feed .txt{white-space:pre-wrap;word-break:break-word}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.empty{color:var(--dim);padding:14px 0}
+.note{color:var(--dim);font-size:12px;margin-top:6px}
+#err{color:var(--red);margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>BOUNCE LAB<small>ADMIN</small></h1>
+    <span class="pill" id="mode"></span>
+    <span class="sp"></span>
+    <select id="range" aria-label="Time range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="3650">All time</option></select>
+    <a class="btn" id="gcLink" target="_blank" rel="noopener" hidden>GoatCounter &#8599;</a>
+    <button class="btn" id="refresh">Refresh</button>
+    <button class="btn" id="csv">Export feedback CSV</button>
+    <button class="btn" id="out" hidden>Sign out</button>
+    <a class="btn" href="../index.html">Lobby</a>
+  </header>
+  <div id="err"></div>
+
+  <div class="gate" id="gate" hidden>
+    <h1>ADMIN</h1>
+    <p>Sign in with the Google account listed in <code>lab/config.js</code> to see feedback and play data.</p>
+    <button class="btn pri" id="signin">Sign in with Google</button>
+    <p class="note" id="gateMsg"></p>
+  </div>
+
+  <main id="app" hidden>
+    <section class="grid kpis" id="kpis"></section>
+    <section class="grid games" id="games"></section>
+    <section class="card feed">
+      <h2>FEEDBACK<small id="fbCount"></small></h2>
+      <div class="filters">
+        <select id="fGame"><option value="">All games</option></select>
+        <select id="fStars"><option value="">Any rating</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option><option value="text">Has a comment</option></select>
+      </div>
+      <div id="feed"></div>
+    </section>
+    <p class="note">Plays = finished runs recorded by the lab kit. Page views, devices and referrers live in GoatCounter.</p>
+  </main>
+</div>
+
+<script src="../lab/config.js"></script>
+<script src="../lab/store.js"></script>
+<script src="../games.js"></script>
+<script>
+(() => {
+'use strict';
+const S = window.BounceLabStore, GAMES = window.BOUNCE_LAB_GAMES || [];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n || 0).toLocaleString();
+const DAY = 864e5;
+let DATA = {};
+
+$('#mode').textContent = S.online ? 'Firebase · live' : 'Demo mode · this device only';
+$('#mode').className = 'pill ' + (S.online ? 'ok' : 'warn');
+const gc = String((S.config && S.config.goatcounter) || '').trim();
+if (gc) { $('#gcLink').href = 'https://' + gc + '.goatcounter.com'; $('#gcLink').hidden = false; }
+$('#fGame').innerHTML += GAMES.map(g => `<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('');
+
+// ---------- auth ----------
+function showGate(msg) { $('#gate').hidden = false; $('#app').hidden = true; $('#out').hidden = true; $('#gateMsg').textContent = msg || ''; }
+function showApp() { $('#gate').hidden = true; $('#app').hidden = false; $('#out').hidden = !S.online; load(); }
+$('#signin').addEventListener('click', () => S.signIn().catch(e => { $('#gateMsg').textContent = 'Sign-in failed: ' + (e.code || e.message); }));
+$('#out').addEventListener('click', () => S.signOut());
+S.onAuth(u => {
+  if (!S.online) return showApp();
+  if (!u) return showGate();
+  if (!S.adminEmails.includes(String(u.email || '').toLowerCase())) return showGate(u.email + ' is not on the admin list.');
+  showApp();
+});
+
+// ---------- data ----------
+async function load() {
+  $('#err').textContent = '';
+  $('#games').innerHTML = '<div class="empty">Loading...</div>';
+  DATA = {};
+  const results = await Promise.allSettled(GAMES.map(async g => {
+    const [summary, sessions, feedback, scores] = await Promise.all([S.summary(g.id), S.listSessions(g.id), S.listFeedback(g.id), S.allScores(g.id, 25)]);
+    DATA[g.id] = { g, summary, sessions, feedback, scores };
+  }));
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length) $('#err').textContent = 'Some data failed to load: ' + (failed[0].reason && (failed[0].reason.code || failed[0].reason.message));
+  render();
+}
+function inRange(ts) { return Date.now() - ts <= +$('#range').value * DAY; }
+function median(a) { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+function dur(sec) { sec = Math.round(sec); return sec < 60 ? sec + 's' : Math.floor(sec / 60) + 'm ' + String(sec % 60).padStart(2, '0') + 's'; }
+
+function render() {
+  const all = Object.values(DATA);
+  let plays = 0, players = new Set(), rSum = 0, rCnt = 0, fbN = 0, timeSum = 0;
+  for (const d of all) {
+    const ss = d.sessions.filter(s => inRange(s.ts));
+    plays += ss.length; ss.forEach(s => { players.add(s.device); timeSum += s.dur || 0; });
+    rSum += d.summary.ratingSum || 0; rCnt += d.summary.ratingCount || 0;
+    fbN += d.feedback.filter(f => inRange(f.ts)).length;
+  }
+  $('#kpis').innerHTML = [
+    [fmt(plays), 'runs played'], [fmt(players.size), 'unique devices'], [timeSum >= 3600 ? Math.floor(timeSum / 3600) + 'h ' + Math.round(timeSum % 3600 / 60) + 'm' : dur(timeSum), 'total play time'],
+    [rCnt ? '★ ' + (rSum / rCnt).toFixed(2) : '–', fmt(rCnt) + ' ratings (all time)'], [fmt(fbN), 'feedback notes']
+  ].map(([b, s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+
+  $('#games').innerHTML = all.map(d => {
+    const g = d.g, ss = d.sessions.filter(s => inRange(s.ts)), sm = d.summary;
+    const devs = new Set(ss.map(s => s.device)).size, med = median(ss.map(s => s.dur || 0)), avgScore = ss.length ? ss.reduce((a, s) => a + (s.score || 0), 0) / ss.length : 0;
+    const days = Math.min(+$('#range').value, 30), buckets = Array(days).fill(0), today = new Date(); today.setHours(0, 0, 0, 0);
+    ss.forEach(s => { const i = days - 1 - Math.floor((today.getTime() + DAY - s.ts) / DAY); if (i >= 0 && i < days) buckets[i]++; });
+    const byV = {}; ss.forEach(s => { byV[s.v || '?'] = (byV[s.v || '?'] || 0) + 1; });
+    const rc = sm.ratingCount || 0, maxR = Math.max(1, ...[1, 2, 3, 4, 5].map(i => sm['r' + i] || 0));
+    return `<article class="card" style="--c:${esc(g.color)}">
+      <h2><i></i>${esc(g.title.toUpperCase())}<small>${esc(g.version)} live &middot; ${fmt(sm.plays || 0)} run${sm.plays === 1 ? '' : 's'} all time</small></h2>
+      <div class="mini">
+        <div><b>${fmt(ss.length)}</b><span>runs</span></div>
+        <div><b>${fmt(devs)}</b><span>devices</span></div>
+        <div><b>${dur(med)}</b><span>median run</span></div>
+        <div><b>${rc ? (sm.ratingSum / rc).toFixed(1) : '–'}</b><span>${rc} rating${rc === 1 ? '' : 's'}</span></div>
+      </div>
+      <h3>RUNS PER DAY &middot; LAST ${days} DAYS</h3>
+      ${spark(buckets, g.color)}
+      <h3>RATINGS</h3>
+      <div class="dist">${[5, 4, 3, 2, 1].map(i => `<div><span>${i}★</span><span class="bar"><span style="width:${100 * (sm['r' + i] || 0) / maxR}%"></span></span><span>${sm['r' + i] || 0}</span></div>`).join('')}</div>
+      <h3>RUNS BY VERSION</h3>
+      <div class="note" style="margin-bottom:8px">${Object.keys(byV).length ? Object.entries(byV).sort().map(([v, n]) => `${esc(v)}: <b>${n}</b>`).join(' &middot; ') : 'No runs in range'} &middot; avg score ${fmt(Math.round(avgScore))}</div>
+      <h3>TOP SCORES</h3>
+      ${d.scores.length ? `<table><tr><th>#</th><th>Name</th><th>Ver</th><th style="text-align:right">Score</th><th></th></tr>${d.scores.slice(0, 10).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.v || '')}</td><td class="n">${fmt(r.score)}</td><td><button class="del" title="Delete this score" data-g="${esc(g.id)}" data-k="scores" data-id="${esc(r.id)}">&#10005;</button></td></tr>`).join('')}</table>` : '<div class="empty">No scores yet</div>'}
+    </article>`;
+  }).join('') || '<div class="empty">No games in games.js</div>';
+  renderFeed();
+}
+function spark(vals, color) {
+  const w = 300, h = 56, max = Math.max(1, ...vals), n = vals.length, bw = w / n;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Runs per day">${vals.map((v, i) => `<rect x="${i * bw + 1}" y="${h - (v / max) * (h - 4) - 1}" width="${Math.max(1, bw - 2)}" height="${(v / max) * (h - 4) + 1}" rx="1.5" fill="${esc(color)}" opacity="${v ? .85 : .15}"><title>${v} runs</title></rect>`).join('')}</svg>`;
+}
+function feedRows() {
+  const fg = $('#fGame').value, fs = $('#fStars').value, rows = [];
+  for (const d of Object.values(DATA)) { if (fg && d.g.id !== fg) continue; for (const f of d.feedback) { if (!inRange(f.ts)) continue; if (fs === 'text' ? !(f.text && f.text !== '(rating only)') : fs && String(f.stars) !== fs) continue; rows.push(Object.assign({ g: d.g }, f)); } }
+  return rows.sort((a, b) => b.ts - a.ts);
+}
+function renderFeed() {
+  const rows = feedRows();
+  $('#fbCount').textContent = rows.length + ' shown';
+  $('#feed').innerHTML = rows.length ? rows.map(f => `<div class="item" style="--c:${esc(f.g.color)}">
+    <span class="tag">${esc(f.g.title)} ${esc(f.v || '')}</span>
+    <div><div class="st">${f.stars ? '★'.repeat(f.stars) + '<span style="opacity:.25">' + '★'.repeat(5 - f.stars) + '</span>' : ''}</div><div class="txt">${esc(f.text)}</div>
+      <div class="meta">${esc(f.name || 'anonymous')} &middot; ${new Date(f.ts).toLocaleString()}${f.score != null ? ' &middot; score ' + fmt(f.score) : ''} &middot; ${esc(device(f.ua))}</div></div>
+    <button class="del" title="Delete" data-g="${esc(f.g.id)}" data-k="feedback" data-id="${esc(f.id)}">&#10005;</button></div>`).join('') : '<div class="empty">No feedback in this range yet.</div>';
+}
+function device(ua) { ua = ua || ''; return /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'other'; }
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.del'); if (!b) return;
+  if (!confirm('Delete this ' + (b.dataset.k === 'scores' ? 'score' : 'feedback note') + '? This cannot be undone.')) return;
+  try { await S.deleteItem(b.dataset.g, b.dataset.k, b.dataset.id); load(); } catch (err) { $('#err').textContent = 'Delete failed: ' + (err.code || err.message); }
+});
+$('#range').addEventListener('change', render);
+$('#fGame').addEventListener('change', renderFeed);
+$('#fStars').addEventListener('change', renderFeed);
+$('#refresh').addEventListener('click', load);
+$('#csv').addEventListener('click', () => {
+  const rows = feedRows(), q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const csv = ['game,version,stars,text,name,score,device,date'].concat(rows.map(f => [f.g.id, f.v, f.stars, f.text, f.name, f.score, device(f.ua), new Date(f.ts).toISOString()].map(q).join(','))).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'bounce-lab-feedback.csv'; a.click();
+});
+})();
+</script>
+</body>
+</html>

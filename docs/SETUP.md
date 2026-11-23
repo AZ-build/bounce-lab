@@ -48,6 +48,8 @@ Claude puts it in `lab/config.js` and pushes the update. Then demo mode turns of
 ---
 
 ## GoatCounter (visit counts)
+**Connected:** https://bounce-lab.goatcounter.com
+
 1. Log in at goatcounter.com, or sign up there for free.
 2. Your site code is the first part of your dashboard address. For `https://bouncelab.goatcounter.com`, the code is `bouncelab`. A new site just for Bounce Lab keeps its numbers separate from your other projects.
 3. Send Claude the code, or put it in `lab/config.js` → `goatcounter: "bouncelab"`.

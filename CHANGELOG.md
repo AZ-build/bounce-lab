@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [Lab 1.3] - 2026-11-22
+- GoatCounter connected: https://bounce-lab.goatcounter.com (page views + events)
+
 ## [Lab 1.2] - 2026-11-22
 - Firebase connected (bounce-lab-ebfbd). Tested live: post score, rank, plays counter, rating + rating change, feedback all save; visitors can't read feedback; faked counters, oversized scores, extra fields and deletes are refused
 - Admin access is now decided only by the Firestore rules (no email in config)

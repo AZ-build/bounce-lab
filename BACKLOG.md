@@ -3,7 +3,7 @@
 ## Next up
 - [x] GitHub repo + Pages
 - [x] Firebase: database, rules, Google sign-in, web app config
-- [ ] GoatCounter code
+- [x] GoatCounter (bounce-lab)
 - [ ] Playtest with 3–5 friends and read the admin page before changing any game
 
 ## Lab ideas

@@ -25,7 +25,7 @@ window.BOUNCE_LAB_CONFIG = {
 
   // 3) GOATCOUNTER — just the code, e.g. "bouncelab" for
   //    https://bouncelab.goatcounter.com. Leave "" to turn analytics off.
-  goatcounter: "",
+  goatcounter: "bounce-lab",
 
   // 4) PUBLIC ADDRESS — used for share links, so they always point at the live site
   siteUrl: "https://az-build.github.io/bounce-lab/",

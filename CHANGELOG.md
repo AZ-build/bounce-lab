@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [Lab 1.8.1] - 2026-11-22
+- Gravity control is now a wall-mounted dial up beside the header (mirrors the Energy readout) instead of a tall slider over the track. Turn it like a knob, drag up/right or down/left, or scroll over it. A neon arc and needle show the setting; double-tap resets to 1g
+- Balls spread across the full width of the track again
+
 ## [Summit v2 "The Valley"] - 2026-11-22
 - Sisyphus is bored: the Titan now walks uphill on its own at a steady pace (5.2 m/s, a little faster every stage, up to 10.5). You only steer left and right
 - Hold STRIKE (or a second finger, or Space) to wind up: the Titan leans back, the ram draws in on its pistons, amber charge lights fill and the camera eases back. Let go to hurl. More wind-up = longer throw. Let go just as the boulder reaches you for a PERFECT (multiplier up to x6)

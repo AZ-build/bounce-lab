@@ -39,7 +39,7 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 - Cards show the current version only; older ones live under "Earlier versions"
 
 ## Lobby mini-game (Lab 1.7)
-- Gravity: `G = G0 × gMul`, set by `setGravity()` from the fader (`#grav`). `hop()` keeps launch speed fixed, so gravity changes hop height
+- Gravity: `G = G0 × gMul`, set by `setGravity()` from the wall dial (`#grav`: SVG gauge, knob turned by drag/scroll via `nudgeT()`). `hop()` keeps launch speed fixed, so gravity changes hop height
 - Surge: `surge()`, recharge time `SURGE_TIME`, lightning in `zaps`
 - Rewards: `CELL` tiers (colour, value, height range), `collectCell()`, power thresholds `POWER_AT`, `powerUp()`. Each wall tube has a power level it needs (`fixtures()`); unlit tubes use `offSprite()`
 - Best energy saved in localStorage as `bouncelab-lobby-energy`

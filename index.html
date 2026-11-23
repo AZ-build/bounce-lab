@@ -70,17 +70,17 @@ body.played #hint{opacity:0}
 #combo{--n:var(--gd);position:fixed;left:50%;top:36%;transform:translate(-50%,-50%) scale(.85);font:400 34px var(--sign);opacity:0;pointer-events:none;transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1);white-space:nowrap}
 #combo.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 
-/* gravity fader: a steel faceplate with a recessed slot */
-#grav{position:fixed;right:10px;top:calc(max(24px,env(safe-area-inset-top)) + 150px);width:54px;height:clamp(200px,34vh,320px);touch-action:none;z-index:4;cursor:ns-resize;border-radius:16px;
-  background:linear-gradient(90deg,#1c1f24,#3d424a 30%,#2a2e35 55%,#1a1c21);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.6),0 0 0 1px rgba(0,0,0,.7),0 10px 26px rgba(0,0,0,.7)}
-#grav .tick{position:absolute;left:8px;right:8px;top:16px;bottom:52px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.16) 0 1px,transparent 1px 10%);-webkit-mask:linear-gradient(90deg,#000 0 9px,transparent 9px calc(100% - 9px),#000 calc(100% - 9px));mask:linear-gradient(90deg,#000 0 9px,transparent 9px calc(100% - 9px),#000 calc(100% - 9px))}
-#grav .slot{position:absolute;left:50%;top:16px;bottom:52px;width:10px;margin-left:-5px;border-radius:5px;background:#030304;box-shadow:inset 0 2px 5px #000,0 1px 0 rgba(255,255,255,.1);overflow:hidden}
-#grav .fill{position:absolute;left:2px;right:2px;bottom:2px;border-radius:3px;background:color-mix(in srgb,var(--gc) 40%,#fff);box-shadow:0 0 6px var(--gc),0 0 14px var(--gc)}
-#grav .cap{position:absolute;left:50%;width:42px;height:24px;margin:-12px 0 0 -21px;border-radius:6px;pointer-events:none;
-  background:repeating-linear-gradient(180deg,rgba(0,0,0,.35) 0 1px,transparent 1px 4px),linear-gradient(180deg,#a7aeb8,#5a616b 45%,#2b2f36 55%,#6b727c);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 0 1px #000,0 6px 12px rgba(0,0,0,.8)}
-#grav .cap:after{content:"";position:absolute;left:6px;right:6px;top:50%;height:2px;margin-top:-1px;background:var(--gc);box-shadow:0 0 6px var(--gc)}
-#grav .rd{position:absolute;left:0;right:0;bottom:8px;text-align:center;line-height:1.1;pointer-events:none}
-#grav .rd b{--n:var(--gc);display:block;font:700 15px var(--f);font-variant-numeric:tabular-nums}
+/* gravity dial: a wall-mounted gauge with a steel knob, up beside the header like the energy readout */
+#grav{position:fixed;right:22px;top:calc(max(24px,env(safe-area-inset-top)) + clamp(110px,29vw,140px));width:84px;touch-action:none;z-index:4;cursor:grab;outline:none;text-align:center;--gc:#3ef6ff}
+#grav .dial{position:relative;width:84px;height:84px;border-radius:50%;
+  background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.22),rgba(255,255,255,0) 55%),conic-gradient(from 30deg,#23262c,#5d636d,#1e2126,#4a5059,#23262c,#5d636d,#1e2126,#4a5059,#23262c);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -2px 0 rgba(0,0,0,.6),0 0 0 1px #000,0 10px 24px rgba(0,0,0,.75)}
+#grav svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#grav .knob{transition:transform .08s linear}
+#grav:focus-visible .dial{box-shadow:0 0 0 2px var(--gc),0 10px 24px rgba(0,0,0,.75)}
+#grav.turning{cursor:grabbing}
+#grav .rd{margin-top:6px;line-height:1.1;pointer-events:none}
+#grav .rd b{--n:var(--gc);display:block;font:700 14px var(--f);font-variant-numeric:tabular-nums}
 #grav .rd span{font:600 8px var(--f);letter-spacing:.24em;text-transform:uppercase;color:var(--mute);padding-left:.24em}
 
 /* surge: a steel push button with a charge ring */
@@ -197,7 +197,7 @@ details.old p{margin:10px 0 8px}
   </div>
 </header>
 <div id="hud" aria-live="polite"><div class="scr"><span class="lbl">Energy</span><span class="lbl">Power</span><span class="n neon" id="hs">0</span><span class="pw" id="pw"><i></i><i></i><i></i><i></i><i></i></span><span class="b">Best <span id="hb">0</span></span></div></div>
-<div id="grav" role="slider" tabindex="0" aria-label="Gravity" aria-valuemin="0.3" aria-valuemax="2.5" aria-valuenow="1"><div class="tick"></div><div class="slot"><div class="fill"></div></div><div class="cap"></div><div class="rd"><b class="neon">1.0g</b><span>Gravity</span></div></div>
+<div id="grav" role="slider" tabindex="0" aria-label="Gravity: turn, drag or scroll" aria-valuemin="0.3" aria-valuemax="2.5" aria-valuenow="1"><div class="dial"><svg viewBox="-50 -50 100 100" aria-hidden="true"><defs><radialGradient id="gk" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#b8bfc9"/><stop offset=".45" stop-color="#5a616b"/><stop offset="1" stop-color="#1c1f24"/></radialGradient></defs><circle r="43" fill="#060708" stroke="#000"/><path d="M -28.28 28.28 A 40 40 0 1 1 28.28 28.28" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3" stroke-linecap="round"/><path class="val" d="M -28.28 28.28 A 40 40 0 1 1 28.28 28.28" fill="none" stroke="var(--gc)" stroke-width="3" stroke-linecap="round" stroke-dasharray="0 188.50" style="filter:drop-shadow(0 0 3px var(--gc))"/><line x1="-21.21" y1="21.21" x2="-25.46" y2="25.46" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="-27.34" y1="17.57" x2="-30.29" y2="19.46" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="-28.11" y1="10.48" x2="-33.73" y2="12.58" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="-32.17" y1="4.63" x2="-35.63" y2="5.12" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="-29.92" y1="-2.14" x2="-35.91" y2="-2.57" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="-31.18" y1="-9.16" x2="-34.54" y2="-10.14" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="-26.33" y1="-14.38" x2="-31.60" y2="-17.25" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="-24.56" y1="-21.28" x2="-27.21" y2="-23.57" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="-17.98" y1="-24.02" x2="-21.57" y2="-28.82" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="-13.50" y1="-29.56" x2="-14.95" y2="-32.75" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="-6.38" y1="-29.31" x2="-7.65" y2="-35.18" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="0.00" y1="-32.50" x2="0.00" y2="-36.00" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="6.38" y1="-29.31" x2="7.65" y2="-35.18" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="13.50" y1="-29.56" x2="14.95" y2="-32.75" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="17.98" y1="-24.02" x2="21.57" y2="-28.82" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="24.56" y1="-21.28" x2="27.21" y2="-23.57" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="26.33" y1="-14.38" x2="31.60" y2="-17.25" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="31.18" y1="-9.16" x2="34.54" y2="-10.14" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="29.92" y1="-2.14" x2="35.91" y2="-2.57" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="32.17" y1="4.63" x2="35.63" y2="5.12" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="28.11" y1="10.48" x2="33.73" y2="12.58" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="27.34" y1="17.57" x2="30.29" y2="19.46" stroke="rgba(255,255,255,0.16)" stroke-width="0.8"/><line x1="21.21" y1="21.21" x2="25.46" y2="25.46" stroke="rgba(255,255,255,0.34)" stroke-width="1.2"/><line x1="8.33" y1="-25.16" x2="11.63" y2="-35.13" stroke="#fff" stroke-opacity=".8" stroke-width="1.6"/><text x="-17" y="36" fill="rgba(255,255,255,.42)" font-size="6.5" text-anchor="middle" font-family="sans-serif" letter-spacing="1">LOW</text><text x="17" y="36" fill="rgba(255,255,255,.42)" font-size="6.5" text-anchor="middle" font-family="sans-serif" letter-spacing="1">HIGH</text><g class="knob"><circle r="19" fill="#000" opacity=".5" cy="2"/><circle r="18" fill="url(#gk)" stroke="#0b0c0e"/><line x1="0.00" y1="-15.50" x2="0.00" y2="-18.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="5.30" y1="-14.57" x2="6.16" y2="-16.91" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="9.96" y1="-11.87" x2="11.57" y2="-13.79" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="13.42" y1="-7.75" x2="15.59" y2="-9.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="15.26" y1="-2.69" x2="17.73" y2="-3.13" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="15.26" y1="2.69" x2="17.73" y2="3.13" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="13.42" y1="7.75" x2="15.59" y2="9.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="9.96" y1="11.87" x2="11.57" y2="13.79" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="5.30" y1="14.57" x2="6.16" y2="16.91" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="0.00" y1="15.50" x2="0.00" y2="18.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-5.30" y1="14.57" x2="-6.16" y2="16.91" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-9.96" y1="11.87" x2="-11.57" y2="13.79" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-13.42" y1="7.75" x2="-15.59" y2="9.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-15.26" y1="2.69" x2="-17.73" y2="3.13" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-15.26" y1="-2.69" x2="-17.73" y2="-3.13" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-13.42" y1="-7.75" x2="-15.59" y2="-9.00" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-9.96" y1="-11.87" x2="-11.57" y2="-13.79" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><line x1="-5.30" y1="-14.57" x2="-6.16" y2="-16.91" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/><circle r="11" fill="url(#gk)" opacity=".8"/><line x1="0" y1="-4" x2="0" y2="-15" stroke="var(--gc)" stroke-width="2.6" stroke-linecap="round" style="filter:drop-shadow(0 0 3px var(--gc))"/></g></svg></div><div class="rd"><b class="neon">1.0g</b><span>Gravity</span></div></div>
 <button id="surge" class="ready" aria-label="Surge: jolt every ball upward"><svg viewBox="0 0 24 24"><path d="M13.5 2 4 14h6.5L9 22l11-13h-6.8z"/></svg><span>Surge</span></button>
 <div id="combo" class="neon"></div>
 <div id="demo"></div>
@@ -371,7 +371,7 @@ function makeBall(game, slot, n) {
     ang: Math.random() * TAU, spinRate: 0.6, trail: [], sq: 0, sqv: 0, sqa: -Math.PI / 2, glow: 0, held: false, leap: null, duck: 0, boost: 0, lastLand: 0, spin: 0 };
   b.sprite = makeSprite(b); return b;
 }
-function slotX(i) { const n = balls.length; return n < 2 ? W / 2 : W * (0.13 + 0.6 * i / (n - 1)); }   // keeps clear of the gravity fader on the right
+function slotX(i) { const n = balls.length; return n < 2 ? W / 2 : W * (0.12 + 0.76 * i / (n - 1)); }   // spread across the whole track (the gravity dial lives up on the wall)
 
 function layout() {
   DPR = Math.min(2, devicePixelRatio || 1);
@@ -615,30 +615,42 @@ function surge() {
 }
 $('#surge').addEventListener('click', e => { e.stopPropagation(); initAudio(); if (AC && AC.state === 'suspended') AC.resume(); surge(); });
 
-// ---------- gravity fader ----------
-const G_MIN = 0.3, G_MAX = 2.5;
+// ---------- gravity dial ----------
+const G_MIN = 0.3, G_MAX = 2.5, DIAL_LEN = 188.50;
 const gToT = g => Math.log(g / G_MIN) / Math.log(G_MAX / G_MIN), tToG = t => G_MIN * Math.pow(G_MAX / G_MIN, clamp(t, 0, 1));
-let lastTick = 1;
+let lastTick = 1, gT = gToT(1);
 function setGravity(g, quiet) {
   gMul = clamp(Math.round(g * 20) / 20, G_MIN, G_MAX); G = G0 * gMul;
-  const el = $('#grav'), t = gToT(gMul), slot = el.querySelector('.slot'), top = slot.offsetTop, h = slot.offsetHeight;
-  const y = top + (1 - t) * h; el.querySelector('.cap').style.top = y + 'px';
-  el.querySelector('.fill').style.height = Math.max(0, t * (h - 4)) + 'px';
+  const el = $('#grav'), t = gToT(gMul);
+  el.querySelector('.knob').setAttribute('transform', `rotate(${(-135 + 270 * t).toFixed(1)})`);
+  el.querySelector('.val').setAttribute('stroke-dasharray', `${(t * DIAL_LEN).toFixed(2)} ${DIAL_LEN}`);
   const col = gMul < 1 ? mix([62, 246, 255], [190, 255, 255], 0) : mix([62, 246, 255], [255, 63, 180], clamp((gMul - 1) / 1.5, 0, 1));
   el.style.setProperty('--gc', `rgb(${col.join(',')})`);
   el.querySelector('.rd b').textContent = (gMul < 1 ? String(+gMul.toFixed(2)) : gMul.toFixed(1)) + 'g';
   el.setAttribute('aria-valuenow', gMul.toFixed(2));
   const tick = Math.round(gMul * 10); if (!quiet && tick !== lastTick) { tone(1400 + gMul * 300, 0.015, 0.03, 'square', 0, 1); lastTick = tick; }
 }
+function nudgeT(d) { gT = clamp(gT + d, 0, 1); setGravity(tToG(gT)); markPlayed(); }
 (() => {
-  const el = $('#grav'); let id = null;
-  const fromY = y => { const slot = el.querySelector('.slot'), r = slot.getBoundingClientRect(); return 1 - (y - r.top) / r.height; };
-  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); initAudio(); id = e.pointerId; try { el.setPointerCapture(id); } catch (_) {} setGravity(tToG(fromY(e.clientY))); markPlayed(); });
-  el.addEventListener('pointermove', e => { if (e.pointerId === id) setGravity(tToG(fromY(e.clientY))); });
-  const end = e => { if (e.pointerId === id) { id = null; S.track('lobby/gravity', 'Lobby: gravity ' + gMul.toFixed(1)); } };
+  // turn it like a knob (drag around it), or drag up/right to raise and down/left to lower, or scroll over it
+  const el = $('#grav'), dial = el.querySelector('.dial'); let drag = null;
+  const center = () => { const r = dial.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); initAudio(); try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    const [cx, cy] = center(); drag = { id: e.pointerId, x: e.clientX, y: e.clientY, a: Math.atan2(e.clientX - cx, cy - e.clientY) }; gT = gToT(gMul); el.classList.add('turning'); });
+  el.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const [cx, cy] = center(), dx = e.clientX - cx, dy = cy - e.clientY, a = Math.atan2(dx, dy);
+    let d;
+    if (Math.hypot(dx, dy) > 24) { let da = a - drag.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; d = da / (1.5 * Math.PI); }
+    else d = ((e.clientX - drag.x) - (e.clientY - drag.y)) / 200;
+    drag.a = a; drag.x = e.clientX; drag.y = e.clientY;
+    nudgeT(d);
+  });
+  const end = e => { if (drag && e.pointerId === drag.id) { drag = null; el.classList.remove('turning'); S.track('lobby/gravity', 'Lobby: gravity ' + gMul.toFixed(1)); } };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
-  el.addEventListener('dblclick', () => setGravity(1));
-  el.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { setGravity(gMul + 0.1); e.preventDefault(); } if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { setGravity(gMul - 0.1); e.preventDefault(); } });
+  el.addEventListener('wheel', e => { e.preventDefault(); initAudio(); gT = gToT(gMul); nudgeT(-(e.deltaY || e.deltaX) / 900); }, { passive: false });
+  el.addEventListener('dblclick', () => { gT = gToT(1); setGravity(1); });
+  el.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { setGravity(gMul + 0.1); gT = gToT(gMul); e.preventDefault(); } if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { setGravity(gMul - 0.1); gT = gToT(gMul); e.preventDefault(); } });
 })();
 
 // ---------- input ----------

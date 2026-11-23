@@ -14,7 +14,7 @@
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
 | rebound | Rebound | v3 Striker | v1–v3 | Session 2: 3D Rocket-League-style striker (three.js bundled inline) |
 | ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
-| summit | Summit | v1 Sisyphus | v1 | Session 4: evolution of Rebound. Tall Titan, heavy boulder, low chase camera, endless mountain |
+| summit | Summit | v2 The Valley | v1–v2 | Session 4: evolution of Rebound. Auto-walking Titan, wind-up strikes, natural valley, camp perks |
 
 ## How a game plugs in
 - One script tag: `<script src="../../lab/lab.js" data-game="<id>" data-version="vN">`
@@ -58,9 +58,10 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Every new version: keep the old file in `versions/`, update `games.js`
 - Phone-first; lab UI stops touches from reaching the game
 
-## Summit notes (v1)
-- Source: `games/summit/src/` (main.js, template.html, build.mjs). Bundled with esbuild into one self-contained index.html, three.js inline like Rebound
-- Tuning: `CFG` (gravity, boulder size/bounce, Titan size, smack power/reach, track width, stage length) and `STAGES` (slope, rocks, tumble, gaps, gates, ridge) at the top of main.js
-- The path: `H(d)` is ground height at distance `d` up the path (d = -z). Crevasses come from `gapsFor(stage)` (seeded, so the slope can add a landing ledge after each gap)
-- Test hook: `window.__summit` exposes state, `update()` and `smack()` for automated playtests
-- Best score saved as `summit-best`; mute as `summit-muted`
+## Summit notes (v2)
+- Source: `games/summit/src/` (main.js, template.html, build.mjs). Bundled with esbuild into one self-contained index.html, three.js inline like Rebound. `npm install && npm run build` in that folder writes ../index.html and ../versions/v2.html
+- Tuning: `CFG` (gravity, boulder, Titan size, walk speed per stage, charge time, throw power range, reach) and `STAGES` (slope, rocks, rockfall, crevasses, blast doors, ridge) at the top of main.js. Advantages are in `PERKS`
+- The valley: `H(d)` floor height at distance d up the path (d = -z), `xc(d)` the winding centre line, `G(d, x)` ground height anywhere (floor bowl + valley walls, or the ridge drop-off). Crevasses come from `gapsFor(stage)` (seeded; the slope adds a landing ledge after each gap)
+- Controls: drag steers `P.toff`; `beginCharge()` / `endCharge()` wind up and release; `strike(charge, auto)`
+- Test hook: `window.__summit` exposes state, `update()`, `strike()`, `offerPerks()`, `takePerk()` for automated playtests
+- Best score saved as `summit-best-v2` (v1 used `summit-best`); mute as `summit-muted`

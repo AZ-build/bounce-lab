@@ -11,4 +11,4 @@ To rebuild (needs Node):
 npm install
 npm run build
 ```
-That writes `../index.html` (with the Bounce Lab hooks) and `../versions/v1.html` (plain archive). For a new version, change the `data-version` in build.mjs and the output file name in package.json first.
+That writes `../index.html` (with the Bounce Lab hooks) and `../versions/v1.html` (plain archive). For a new version, change `data-version` in build.mjs and the versions/vN.html file name in package.json first. Older versions in ../versions/ are frozen archives.

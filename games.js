@@ -138,13 +138,13 @@ window.BOUNCE_LAB_GAMES = [
   {
     "id": "summit",
     "title": "Summit",
-    "tagline": "Sisyphus, but make it neon",
-    "description": "Smack a heavy magma boulder up an endless mountain with your Titan, then get under it when it rolls back. Crevasses, rockfall, sliding slabs and a ridge with no walls.",
-    "controls": "Drag to move, tap to smack",
+    "tagline": "Hurl the boulder up an endless valley",
+    "description": "Sisyphus is bored. Your steel Titan never stops walking up the valley: wind up, hurl the boulder ahead and time the next hit as it rolls back. Earn advantages at every camp.",
+    "controls": "Drag to steer, hold STRIKE to wind up, let go to hurl",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v1",
-    "versionName": "Sisyphus",
+    "version": "v2",
+    "versionName": "The Valley",
     "added": "2026-11-22",
     "updated": "2026-11-22",
     "status": "prototype",
@@ -153,6 +153,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v1",
         "name": "Sisyphus",
         "file": "versions/v1.html"
+      },
+      {
+        "v": "v2",
+        "name": "The Valley",
+        "file": "versions/v2.html"
       }
     ]
   }

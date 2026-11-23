@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [Summit v2 "The Valley"] - 2026-11-22
+- Sisyphus is bored: the Titan now walks uphill on its own at a steady pace (5.2 m/s, a little faster every stage, up to 10.5). You only steer left and right
+- Hold STRIKE (or a second finger, or Space) to wind up: the Titan leans back, the ram draws in on its pistons, amber charge lights fill and the camera eases back. Let go to hurl. More wind-up = longer throw. Let go just as the boulder reaches you for a PERFECT (multiplier up to x6)
+- If the boulder reaches you while you're winding up it still gets hit (weaker, no perfect). If you're not winding up it's a "bonk": a weak shove that costs your combo
+- New look: a natural rocky valley (gravel floor, rock walls, moss low, snow and falling snow higher up) under moonlight with real shadows. The lab shows up in the man-made parts: brushed-steel Titan with a concrete base and a neon tube, steel blast doors with hazard stripes, concrete camp outposts with neon signs, lobby-style energy cells as pickups, warning bollards at crevasses
+- Titan is taller (3.9 m) and turns see-through when the boulder is behind it
+- Rocks and blast doors knock the Titan sideways and stun it; rockfall comes off the valley walls
+- Camps: bonus, +1 boulder, and a choice of 3 advantages: Heavy Hands, Long Arms, Quick Wind-up, Foresight (landing arc), Focus (slow-mo while winding up), Stone Skin, Backstop, Spare Boulder, Lodestone, Sure Footing
+- Throw distance scores points; game over shows the longest throw. Best score key is now `summit-best-v2`
+- v1 kept at games/summit/versions/v1.html
+
 ## [Lab 1.8] - 2026-11-22
 - New game: **Summit v1 "Sisyphus"** (`games/summit/`), an evolution of Rebound:
   - You drive a tall glass-and-steel Titan (3 m tall vs Rebound's low puck) up an endless neon mountain path

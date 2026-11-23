@@ -31,6 +31,7 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 - Palette: void #050507, panel #0b0c10, raised #15171d, text #e8f1ff, soft #a9b4c6, muted #677285, neon cyan #3ef6ff, magenta #ff3fb4, amber #ffc23a
 - Type: Tilt Neon for signs and titles (looks like real neon tubes), Chakra Petch for everything else
 - `.neon` CSS class = realistic neon text (set `--n` to the colour)
+- Materials: `buildMaterials()` makes the concrete floor, brushed steel and block textures; `perspFill()` lays a texture flat in perspective; `seams()` draws joints; `box3d()` draws concrete/steel boxes; `makeSprite()` builds the steel balls (base/detail/gloss layers, `drawBall()` draws them, `b.ang` is the roll); `paintOrb()` puts a ball in a card
 - Lobby scene in `render()`: `buildWall()` pre-renders the concrete wall once per screen size; `fixtures()` places the neon tubes; floor reflections, crates and labels follow
 - Lobby physics knobs: `BR` (ball size, 0.75 × R), `G` (gravity, H × 1.6), `V` (parade speed) in `layout()`; per-game hop feel in `PERSONALITY`
 - Cards show the current version only; older ones live under "Earlier versions"

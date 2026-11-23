@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [Lab 1.6] - 2026-11-22
+- Everything on the floor now matches the concrete-and-neon wall:
+  - Balls are gunmetal steel spheres with glowing neon seams (tennis-ball curve) that really roll. Layers: steel body + energy halo, rotating seams, fixed reflections (highlight + the cyan floor strip mirrored in the ball)
+  - "Soon" is a flickering hologram wireframe sphere
+  - Floor is polished concrete drawn in true perspective (sawcut joints running back into the room), reflecting the wall neon
+  - Track is brushed-steel plates with bolts, set into the floor, with a steel front lip and a neon channel
+  - Blocks are concrete with steel caps and a neon channel; pillars are steel posts with a vertical neon tube; trampolines are steel launch pads with a chrome coil spring and energy glow
+- Cards, list and in-game sheet: concrete panels (assets/concrete.png), brushed-steel round buttons, neon buttons set in steel bezels, and the real 3D ball as each game's icon
+
 ## [Lab 1.5] - 2026-11-22
 - New look: a dark test lab. Near-black poured-concrete wall (panel seams, form-tie holes) that scrolls slower than the floor for depth, realistic neon tubes bolted to it (white-hot core, coloured glow, light on the wall, the occasional flicker), a cyan strip where the wall meets the floor, and a glossy floor in perspective that reflects the neon and the balls
 - Obstacles are metal test crates seen slightly from above, with neon edge strips; springs are glowing launch pads; stars are little neon signs

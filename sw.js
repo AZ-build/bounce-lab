@@ -2,9 +2,9 @@
    Network first: when you're online you always get the newest files (no stale versions).
    Offline, it falls back to whatever you've played before. Only this site's own files are
    handled; Firebase, fonts and analytics go straight to the network. */
-const CACHE = 'bouncelab-v2';
+const CACHE = 'bouncelab-v3';
 const CORE = ['./', 'index.html', 'games.js', 'lab/config.js', 'lab/store.js', 'lab/lab.js', 'lab/lab.css',
-  'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+  'manifest.webmanifest', 'assets/concrete.png', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {}).then(() => self.skipWaiting()));

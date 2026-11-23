@@ -241,9 +241,9 @@ details.old p{margin:10px 0 8px}
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="wipe"></div>
 
-<script src="lab/config.js?v=1.7"></script>
-<script src="lab/store.js?v=1.7"></script>
-<script src="games.js?v=1.7"></script>
+<script src="lab/config.js?v=1.8"></script>
+<script src="lab/store.js?v=1.8"></script>
+<script src="games.js?v=1.8"></script>
 <script>
 (() => {
 'use strict';
@@ -361,6 +361,7 @@ const PERSONALITY = {
   bouncer: { hop: 1.45, var: 0.1,  air: 1.0 },  // springy, steady rhythm
   rebound: { hop: 0.95, var: 0.12, air: 1.15 }, // lower, quicker little hops
   ascent:  { hop: 2.15, var: 0.08, air: 0.85 }, // tall, floaty
+  summit:  { hop: 0.8,  var: 0.06, air: 1.25 }, // heavy boulder: low, slow, thuddy
 };
 function makeBall(game, slot, n) {
   const ghost = !!game.ghost, r = ghost ? BR * 0.72 : BR;

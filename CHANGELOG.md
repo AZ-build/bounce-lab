@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [Lab 1.8] - 2026-11-22
+- New game: **Summit v1 "Sisyphus"** (`games/summit/`), an evolution of Rebound:
+  - You drive a tall glass-and-steel Titan (3 m tall vs Rebound's low puck) up an endless neon mountain path
+  - The ball is a heavy magma-cracked boulder: bigger, more gravity, low bounce, thuddy sound and camera shake
+  - Camera is locked low and close behind the Titan with a wide lens; the boulder shows through the Titan's glass body
+  - Tap (or the SMACK button, or a second finger) to smack the boulder up and ahead when it's inside the gold reach ring. Smack it as it rolls back into you for a PERFECT (more power, multiplier up to x5)
+  - Let it get past you, drop it in a crevasse or off the ridge and you lose a boulder (3 per run, +1 at each camp)
+  - Stages every 180 m of path, each steeper: Foothills, The Scree (falling rocks that stun you), Crevasses (flat landing ledges past each gap), The Gates (sliding slabs), The Ridge (no walls). After that they loop, steeper and mixed
+  - Shards to knock the boulder through (amber low, cyan high), camp gates with a bonus and the lab colour changes per stage
+  - The summit beacon on the horizon never gets any closer
+- Readable source lives in `games/summit/src/` (unlike Rebound's minified bundle); `npm run build` there regenerates the game
+- Lobby: Summit's ball hops low and heavy; share images regenerated
+
 ## [Lab 1.7] - 2026-11-22
 - The lobby is now a little game:
   - Gravity fader (right edge): slide from 0.3g to 2.5g. Balls launch at the same speed, so low gravity sends them higher and floatier, heavy gravity keeps them low and quick. Dust on the wall drifts up or sinks to show it. Double-tap resets to 1g; arrow keys work too

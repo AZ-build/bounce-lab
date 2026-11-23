@@ -28,6 +28,7 @@ ICONS = {
     "side": '<path d="M-50 -38H10M-10 38H50"/><circle cx="-8" cy="0" r="13" fill="#fff" stroke="none"/><path d="M18 0H50M36 -13 50 0 36 13"/>',
     "goal": '<path d="M-50 35V-28H50V35"/><path d="M-50 -8H50M-17 -28V12M17 -28V12" opacity=".45" stroke-width="3"/><circle cx="8" cy="28" r="13" fill="#fff" stroke="none"/>',
     "up":   '<path d="M-30 -2 0 -30 30 -2M-30 20 0 -8 30 20"/><path d="M-40 42Q0 32 40 42"/>',
+    "peak": '<path d="M-52 40 -12 -26 8 4 22 -14 52 40Z"/><circle cx="-24" cy="-34" r="12" fill="#fff" stroke="none"/>',
 }
 
 CARD = """<!DOCTYPE html><html><head><meta charset="utf-8">

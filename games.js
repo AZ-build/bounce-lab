@@ -134,5 +134,26 @@ window.BOUNCE_LAB_GAMES = [
         "file": "versions/v5.html"
       }
     ]
+    },
+  {
+    "id": "summit",
+    "title": "Summit",
+    "tagline": "Sisyphus, but make it neon",
+    "description": "Smack a heavy magma boulder up an endless mountain with your Titan, then get under it when it rolls back. Crevasses, rockfall, sliding slabs and a ridge with no walls.",
+    "controls": "Drag to move, tap to smack",
+    "color": "#ff5226",
+    "icon": "peak",
+    "version": "v1",
+    "versionName": "Sisyphus",
+    "added": "2026-11-22",
+    "updated": "2026-11-22",
+    "status": "prototype",
+    "versions": [
+      {
+        "v": "v1",
+        "name": "Sisyphus",
+        "file": "versions/v1.html"
+      }
+    ]
   }
 ];

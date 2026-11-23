@@ -120,7 +120,7 @@
       </div>
       <div id="bl-toast"></div>`;
     document.body.appendChild(root);
-    if (!document.querySelector('link[data-bl-font]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.blFont = '1'; f.href = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap'; document.head.appendChild(f); }
+    if (!document.querySelector('link[data-bl-font]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.blFont = '1'; f.href = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap'; document.head.appendChild(f); }
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register(new URL('sw.js', ROOT_URL).href).catch(() => {});
     ui = { root };
 

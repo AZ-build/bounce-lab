@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [Lab 1.5] - 2026-11-22
+- New look: a dark test lab. Near-black poured-concrete wall (panel seams, form-tie holes) that scrolls slower than the floor for depth, realistic neon tubes bolted to it (white-hot core, coloured glow, light on the wall, the occasional flicker), a cyan strip where the wall meets the floor, and a glossy floor in perspective that reflects the neon and the balls
+- Obstacles are metal test crates seen slightly from above, with neon edge strips; springs are glowing launch pads; stars are little neon signs
+- Header is a neon sign (Tilt Neon font) that flickers on when the page loads; UI font is Chakra Petch
+- Cards and lists: dark glass panels with a neon tube along the top in the game's colour, neon title, lit "Play" button
+- In-game overlay and app icon switched to the same dark neon style
+- Keeps 1.4's calmer bounces, simpler cards and latest-version-first
+
 ## [Lab 1.4] - 2026-11-22
 - Lobby redesign: calm dusk scene (soft hills, no neon grid or city), Bricolage Grotesque type, sentence case everywhere. The balls are the only bright colours on screen
 - Happier bounces: balls are 75% of their old size, gravity is about 40% lighter, hops are higher and steadier, the wobble on landing is softer, collisions are gentler, leapfrogs happen about half as often, and the parade moves a bit slower

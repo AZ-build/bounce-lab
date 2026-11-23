@@ -1,18 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
 <defs>
- <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e1230"/><stop offset="1" stop-color="#2b2660"/></linearGradient>
- <radialGradient id="ball" cx=".36" cy=".32" r=".75"><stop offset="0" stop-color="#fff6d2"/><stop offset=".28" stop-color="#ffd25a"/><stop offset=".8" stop-color="#ff9a3c"/><stop offset="1" stop-color="#f0682e"/></radialGradient>
- <radialGradient id="glow"><stop offset="0" stop-color="#ffc14d" stop-opacity=".45"/><stop offset="1" stop-color="#ffc14d" stop-opacity="0"/></radialGradient>
- <radialGradient id="sh"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+ <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050507"/><stop offset=".72" stop-color="#121318"/><stop offset=".721" stop-color="#0a0b0e"/><stop offset="1" stop-color="#030304"/></linearGradient>
+ <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+ <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+ <radialGradient id="pool"><stop offset="0" stop-color="#ff3fb4" stop-opacity=".5"/><stop offset="1" stop-color="#ff3fb4" stop-opacity="0"/></radialGradient>
+ <radialGradient id="wash"><stop offset="0" stop-color="#ff3fb4" stop-opacity=".28"/><stop offset="1" stop-color="#ff3fb4" stop-opacity="0"/></radialGradient>
 </defs>
-<rect width="512" height="512" rx="114" fill="url(#bg)"/>
+<rect width="512" height="512" rx="114" fill="url(#wall)"/>
 <g transform="translate(0.0 0.0) scale(1.0)">
- <path d="M70 396 Q256 380 442 396" stroke="#ffffff" stroke-opacity=".16" stroke-width="7" fill="none" stroke-linecap="round"/>
- <ellipse cx="318" cy="394" rx="62" ry="12" fill="url(#sh)"/>
- <circle cx="124" cy="352" r="8" fill="#ffd25a" fill-opacity=".35"/>
- <circle cx="156" cy="296" r="10" fill="#ffd25a" fill-opacity=".5"/>
- <circle cx="196" cy="252" r="12" fill="#ffd25a" fill-opacity=".7"/>
- <circle cx="318" cy="208" r="150" fill="url(#glow)"/>
- <circle cx="318" cy="208" r="84" fill="url(#ball)"/>
- <ellipse cx="290" cy="172" rx="30" ry="17" transform="rotate(-30 290 172)" fill="#fff" fill-opacity=".75"/>
+ <!-- panel seams -->
+ <path d="M170 0V368M342 0V368M0 184H512" stroke="#000" stroke-opacity=".7" stroke-width="3"/>
+ <circle cx="256" cy="200" r="170" fill="url(#wash)"/>
+ <!-- cyan neon strip at the base of the wall -->
+ <rect x="0" y="364" width="512" height="5" fill="#3ef6ff" filter="url(#glow)"/>
+ <rect x="0" y="365.5" width="512" height="2" fill="#dcffff"/>
+ <rect x="0" y="369" width="512" height="40" fill="#3ef6ff" fill-opacity=".08"/>
+ <!-- reflection of the ring -->
+ <ellipse cx="300" cy="420" rx="90" ry="20" fill="url(#pool)"/>
+ <!-- bounce trail -->
+ <g fill="#ff9ad6"><circle cx="118" cy="320" r="7" opacity=".45"/><circle cx="146" cy="262" r="9" opacity=".65"/><circle cx="184" cy="216" r="11" opacity=".85"/></g>
+ <!-- the ball as a neon tube ring -->
+ <circle cx="300" cy="200" r="86" fill="none" stroke="#ff3fb4" stroke-width="26" filter="url(#bloom)" opacity=".9"/>
+ <circle cx="300" cy="200" r="86" fill="none" stroke="#ff3fb4" stroke-width="13" filter="url(#glow)"/>
+ <circle cx="300" cy="200" r="86" fill="none" stroke="#ffd6ef" stroke-width="6"/>
 </g></svg>

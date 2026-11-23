@@ -27,9 +27,11 @@
 ## Lobby
 A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game feel is in `PERSONALITY`; leapfrogs are in `maybeLeapfrog()`. The course (blocks, pillars, springs, stars) is generated in `spawnCourse()`.
 
-## Look and feel (Lab 1.4)
-- Palette: night #0e1230, dusk #2b2660, sheet #151937, raised #1d2246, text #eef0ff, soft #b7bbe0, muted #7f84b0, sun #ffc94d. Game ball colours are the only saturated colours
-- Type: Bricolage Grotesque (Google Fonts), sentence case, no all-caps labels
+## Look and feel (Lab 1.5: dark neon test lab)
+- Palette: void #050507, panel #0b0c10, raised #15171d, text #e8f1ff, soft #a9b4c6, muted #677285, neon cyan #3ef6ff, magenta #ff3fb4, amber #ffc23a
+- Type: Tilt Neon for signs and titles (looks like real neon tubes), Chakra Petch for everything else
+- `.neon` CSS class = realistic neon text (set `--n` to the colour)
+- Lobby scene in `render()`: `buildWall()` pre-renders the concrete wall once per screen size; `fixtures()` places the neon tubes; floor reflections, crates and labels follow
 - Lobby physics knobs: `BR` (ball size, 0.75 × R), `G` (gravity, H × 1.6), `V` (parade speed) in `layout()`; per-game hop feel in `PERSONALITY`
 - Cards show the current version only; older ones live under "Earlier versions"
 

@@ -1,4 +1,4 @@
-// SUMMIT v3 "The Climb" — a Sisyphus game for Bounce Lab.
+// SUMMIT v4 "Sisyphus" — a Sisyphus game for Bounce Lab.
 // Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
 // endless mountain road, hurling a giant boulder ahead and smashing it again when it
 // rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
@@ -13,12 +13,12 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 const CFG = {
   g: 28,
   ballR: 2.0, ballMass: 6, ballBounce: .22, ballRoll: .08,
-  bodyR: 1.5, bodyH: 1.9,                       // crawler collision size
+  bodyR: 1.0, bodyH: 3.3,                       // Sisyphus as an upright capsule
   speed0: 5.2, speedStep: .42, speedMax: 10.5,  // the drive uphill, per stage
   steer: 14, steerMax: 13, dragGain: 1.3,
   chargeTime: .8,
   fwdMin: 12, fwdMax: 27, upMin: 8, upMax: 16,
-  reach: 2.5, perfectGap: 1.1,
+  reach: 2.2, perfectGap: 1.0,
   hw: 6.5, ridgeHw: 5,
   stageLen: 190, campLen: 18, startFlat: 12,
   cloudY: 78,                                   // the cloud layer you climb through
@@ -601,65 +601,117 @@ const ball = (() => {
     grounded: false, heat: 0, spinAxis: new THREE.Vector3(1, 0, 0), spin: 0, lost: 0, lostWhy: '', flying: false, throwFrom: 0 };
 })();
 
-// ---------------------------------------------------------------- the crawler (and a very bored Sisyphus)
+// ---------------------------------------------------------------- Sisyphus himself
+// A big marble figure (about 3.6 m) trudging uphill. Right fist in a steel gauntlet for punching,
+// left forearm raised to block when the boulder rolls into him.
 const P = { d: 0, off: 0, toff: 0, p: new THREE.Vector3(), v: new THREE.Vector3(), stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0,
-  group: new THREE.Group(), arm: 0, armV: 0, lean: 0, cheer: 0, tread: 0 };
-const ARM_REST = -.28, ARM_BACK = 1.95, ARM_FOLLOW = -.7;
+  group: new THREE.Group(), walk: 0, lastStep: 0, guard: 0, block: 0, cheer: 0, fade: 1, yaw: 0 };
+const figMats = [];
+const J = {}; // joints
 (() => {
   const g = P.group;
-  const steel = new THREE.MeshStandardMaterial({ color: 0xd4dbe4, map: steelMap, metalness: .8, roughness: .32, envMapIntensity: 2.4 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: .8, roughness: .4, envMapIntensity: 2 });
-  const conc = new THREE.MeshStandardMaterial({ color: 0x8d9096, map: concreteMap, roughness: .85 });
-  treadTex.repeat.set(1, 3);
-  const rubber = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, map: treadTex, roughness: .9 }); P.treadMap = treadTex;
-  const marble = new THREE.MeshStandardMaterial({ color: 0xe4ddd0, roughness: .55, metalness: 0 });
-  const body = new THREE.Group(); g.add(body); P.body = body;
-  const add = (geo, mat, x, y, z, parent = body, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = shadow; parent.add(m); return m; };
-  // tracks
-  for (const s of [-1, 1]) {
-    add(new THREE.BoxGeometry(.75, .8, 3.3), rubber, s * 1.2, .45, 0);
-    for (const z of [-1.45, 1.45]) { const w = add(new THREE.CylinderGeometry(.42, .42, .8, 16), dark, s * 1.2, .45, z); w.rotation.z = Math.PI / 2; }
-    for (const z of [-.6, .3]) { const w = add(new THREE.CylinderGeometry(.3, .3, .82, 12), steel, s * 1.2, .38, z); w.rotation.z = Math.PI / 2; }
-    add(new THREE.BoxGeometry(.8, .12, 3.0), steel, s * 1.2, .9, 0);
+  const mk = (o) => { const m = new THREE.MeshStandardMaterial({ transparent: true, ...o }); figMats.push(m); return m; };
+  const marbleTex = tex(noiseCanvas(256, (x, s) => {
+    x.fillStyle = '#e9e2d6'; x.fillRect(0, 0, s, s);
+    for (let i = 0; i < 18; i++) { x.strokeStyle = `rgba(120,110,100,${rnd(.05, .14)})`; x.lineWidth = rnd(.5, 2); x.beginPath(); let px = rnd(0, s), py = rnd(0, s); x.moveTo(px, py); for (let k = 0; k < 8; k++) { px += rnd(-40, 40); py += rnd(-40, 40); x.lineTo(px, py); } x.stroke(); }
+    for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '90,80,70'},${rnd(.03, .08)})`; x.fillRect(rnd(0, s), rnd(0, s), 2, 2); }
+  }));
+  const marble = mk({ color: 0xe8e0d2, map: marbleTex, roughness: .42, metalness: 0, envMapIntensity: 1.2 });
+  const cloth = mk({ color: 0x40302a, roughness: .95 });
+  const leather = mk({ color: 0x6a4428, roughness: .8 });
+  const hair = mk({ color: 0x3b2f27, roughness: .9 });
+  const steel = mk({ color: 0xd4dbe4, map: steelMap, metalness: .85, roughness: .3, envMapIntensity: 2.2 });
+  const leaf = mk({ color: 0x6f8a3a, roughness: .7 });
+  const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .55, .2), transparent: true, opacity: 0 }); P.glowM = glowM;
+  const add = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+  const joint = (parent, x, y, z) => { const j = new THREE.Group(); j.position.set(x, y, z); parent.add(j); return j; };
+  const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
+  const root = joint(g, 0, 0, 0); root.scale.setScalar(2); J.root = root;
+  const hips = joint(root, 0, .93, 0); J.hips = hips;
+  const pelvis = add(hips, cap(.14, .14), cloth); pelvis.rotation.z = Math.PI / 2;
+  const kilt = add(hips, new THREE.CylinderGeometry(.19, .25, .3, 14, 1, true), cloth, 0, -.12, 0); kilt.material.side = THREE.DoubleSide;
+  add(hips, new THREE.TorusGeometry(.19, .025, 6, 20), leather, 0, .04, 0).rotation.x = Math.PI / 2; // belt
+  for (const s of [-1, 1]) { // legs
+    const hip = joint(hips, s * .1, -.04, 0); J['hip' + s] = hip;
+    add(hip, cap(.095, .24), marble, 0, -.21, 0);
+    const knee = joint(hip, 0, -.43, 0); J['knee' + s] = knee;
+    add(knee, cap(.072, .26), marble, 0, -.2, 0);
+    add(knee, new THREE.SphereGeometry(.075, 10, 8), marble);
+    const ankle = joint(knee, 0, -.42, 0);
+    add(ankle, new THREE.BoxGeometry(.1, .05, .23), leather, 0, -.02, -.05);
+    add(knee, new THREE.CylinderGeometry(.064, .062, .08, 10), leather, 0, -.33, 0); // sandal strap
   }
-  // hull, nose and a concrete counterweight
-  add(new THREE.BoxGeometry(1.75, .9, 2.9), steel, 0, 1.25, 0);
-  const nose = add(new THREE.BoxGeometry(1.76, .5, .5), hazardMat, 0, 1.05, -1.5); nose.rotation.x = .5;
-  add(new THREE.BoxGeometry(1.8, .7, .8), conc, 0, 1.25, 1.4);
-  const neonM = new THREE.MeshBasicMaterial({ color: new THREE.Color(.45, .95, 1).multiplyScalar(2) }); P.neonM = neonM;
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(.04, .07, 2.6), neonM, s * .89, 1.42, 0, body, false);
-  add(new THREE.BoxGeometry(1.2, .07, .05), neonM, 0, 1.45, 1.81, body, false);
-  add(new THREE.CylinderGeometry(.1, .12, .8, 10), dark, -.65, 2.0, 1.25);
-  P.stackTop = new THREE.Vector3(-.65, 2.45, 1.25);
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(.18, .8, .5), dark, s * .45, 2.0, -.8);
-  // the sledgehammer arm
-  const pivot = new THREE.Group(); pivot.position.set(0, 2.2, -.8); body.add(pivot); P.pivot = pivot;
-  const axle = add(new THREE.CylinderGeometry(.16, .16, 1.1, 12), steel, 0, 0, 0, pivot); axle.rotation.z = Math.PI / 2;
-  add(new THREE.BoxGeometry(.28, .28, 2.5), dark, 0, 0, -1.25, pivot);
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(.06, .06, 2.2), neonM, s * .16, .1, -1.25, pivot, false);
-  const head = new THREE.Group(); head.position.set(0, 0, -2.6); pivot.add(head);
-  const hd = add(new THREE.CylinderGeometry(.62, .62, 1.9, 24), steel, 0, 0, 0, head); hd.rotation.z = Math.PI / 2;
-  const band = add(new THREE.CylinderGeometry(.64, .64, .45, 24), hazardMat, 0, 0, 0, head); band.rotation.z = Math.PI / 2;
-  const chargeM = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .55, .2), transparent: true, opacity: 0 }); P.chargeM = chargeM;
-  for (const s of [-1, 1]) { const ring = add(new THREE.TorusGeometry(.6, .05, 8, 28), chargeM, s * .97, 0, 0, head, false); ring.rotation.y = Math.PI / 2; }
-  // Sisyphus, seated on the back, chin on fist, deeply unimpressed
-  const sis = new THREE.Group(); sis.position.set(.45, 1.7, .95); body.add(sis); P.sis = sis;
-  add(new THREE.BoxGeometry(.6, .12, .6), dark, 0, 0, 0, sis);
-  const torso = add(new THREE.CapsuleGeometry(.2, .42, 4, 10), marble, 0, .45, .05, sis); torso.rotation.x = .25;
-  P.sisHead = add(new THREE.SphereGeometry(.17, 14, 10), marble, 0, .92, -.02, sis);
-  const wreath = add(new THREE.TorusGeometry(.17, .03, 6, 16), new THREE.MeshStandardMaterial({ color: 0x6f8a3a, roughness: .7 }), 0, 1.0, -.02, sis); wreath.rotation.x = Math.PI / 2 + .2;
-  for (const s of [-1, 1]) {
-    const th = add(new THREE.CapsuleGeometry(.09, .34, 4, 8), marble, s * .12, .08, -.22, sis); th.rotation.x = Math.PI / 2;
-    add(new THREE.CapsuleGeometry(.08, .32, 4, 8), marble, s * .12, -.18, -.44, sis);
+  const spine = joint(hips, 0, .08, 0); J.spine = spine;
+  add(spine, cap(.15, .16), marble, 0, .13, 0);
+  const chest = add(spine, cap(.18, .18), marble, 0, .35, 0); chest.scale.set(1.45, 1, .9);
+  const strap = add(spine, new THREE.BoxGeometry(.06, .62, .02), leather, 0, .3, .15); strap.rotation.z = .62;
+  const strapF = add(spine, new THREE.BoxGeometry(.06, .62, .02), leather, 0, .3, -.15); strapF.rotation.z = .62;
+  add(spine, cap(.068, .06), marble, 0, .53, 0);
+  const head = joint(spine, 0, .63, 0); J.head = head;
+  const skull = add(head, new THREE.SphereGeometry(.11, 16, 12), marble); skull.scale.set(1, 1.12, 1.05);
+  const curls = add(head, new THREE.SphereGeometry(.118, 14, 10), hair, 0, .03, .02); curls.scale.set(1.02, .95, 1.05);
+  add(head, new THREE.SphereGeometry(.07, 10, 8), hair, 0, -.07, -.06).scale.set(1, 1.1, .8); // beard
+  add(head, new THREE.SphereGeometry(.03, 8, 6), marble, 0, -.01, -.11); // nose
+  const wreath = add(head, new THREE.TorusGeometry(.12, .02, 6, 18), leaf, 0, .06, 0); wreath.rotation.x = Math.PI / 2 + .15;
+  for (const s of [-1, 1]) { // arms
+    const sh = joint(spine, s * .28, .45, 0); J['sh' + s] = sh;
+    add(sh, new THREE.SphereGeometry(.1, 12, 10), marble);
+    add(sh, cap(.075, .18), marble, 0, -.15, 0);
+    const el = joint(sh, 0, -.31, 0); J['el' + s] = el;
+    add(el, new THREE.SphereGeometry(.068, 10, 8), marble);
+    add(el, cap(.064, .16), marble, 0, -.13, 0);
+    if (s > 0) { // the punching fist: a steel gauntlet with a charge ring
+      add(el, new THREE.CylinderGeometry(.085, .075, .17, 14), steel, 0, -.2, 0);
+      add(el, new THREE.SphereGeometry(.095, 12, 10), steel, 0, -.31, 0);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.088, .014, 6, 20), glowM); ring.rotation.x = Math.PI / 2; ring.position.y = -.2; el.add(ring);
+      const ring2 = ring.clone(); ring2.position.y = -.14; el.add(ring2);
+    } else {
+      add(el, new THREE.CylinderGeometry(.08, .07, .2, 12), leather, 0, -.13, 0); // leather bracer (the blocking arm)
+      add(el, new THREE.SphereGeometry(.075, 10, 8), marble, 0, -.3, 0);
+    }
   }
-  const armR = new THREE.Group(); armR.position.set(.24, .68, 0); sis.add(armR);
-  const fore = add(new THREE.CapsuleGeometry(.065, .38, 4, 8), marble, -.08, .05, -.16, armR); fore.rotation.x = -.9; fore.rotation.z = .4;
-  const armL = new THREE.Group(); armL.position.set(-.24, .68, 0); sis.add(armL); P.sisArmL = armL;
-  const foreL = add(new THREE.CapsuleGeometry(.065, .4, 4, 8), marble, 0, -.2, -.12, armL); foreL.rotation.x = .5;
-  const thr = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.6), new THREE.MeshBasicMaterial({ map: glowTex, color: new THREE.Color(.4, .85, 1).multiplyScalar(.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  thr.rotation.x = -Math.PI / 2; thr.position.y = .03; g.add(thr);
   scene.add(g);
 })();
+// the pose: walking, winding up (right arm cocked, torso twisted), punching, guarding, blocking
+function poseFigure(dt, t, sp) {
+  P.walk += dt * sp / 2.6 * Math.PI * 2;
+  const ph = P.walk;
+  // footsteps
+  const stepIdx = Math.floor(ph / Math.PI);
+  if (stepIdx !== P.lastStep && mode === 'play') { P.lastStep = stepIdx; sfx.step(); dustAt.set(0, 0, 0); J['hip' + (stepIdx % 2 ? 1 : -1)].localToWorld(dustAt.set(0, -.9, 0)); dust(dustAt, 3, 1.2); }
+  const c = P.charging ? P.charge : 0;
+  // punch extension: fast out, slower back
+  const r = P.release, ext = r <= 0 ? 0 : r > .8 ? (1 - r) / .2 : r / .8;
+  for (const s of [-1, 1]) {
+    const leg = Math.sin(ph + (s > 0 ? Math.PI : 0));
+    J['hip' + s].rotation.x = .5 * leg;
+    J['knee' + s].rotation.x = -(.1 + .62 * Math.max(0, Math.cos(ph + (s > 0 ? Math.PI : 0))));
+  }
+  J.hips.position.y = .92 + .025 * Math.cos(ph * 2) - c * .07;
+  J.root.position.z = -ext * .4;
+  const stunWob = P.stun > 0 ? Math.sin(t * 30) * .12 : 0;
+  J.spine.rotation.x = -.3 + c * .16 - ext * .2 + P.block * .3;
+  J.spine.rotation.y = -.85 * c + .6 * ext;
+  J.spine.rotation.z = .05 * Math.sin(ph) + stunWob;
+  J.head.rotation.x = .18 - c * .1;
+  J.head.rotation.z = Math.sin(t * .6) * .06;
+  // right arm: swing, cock, punch
+  const swingR = .35 * Math.sin(ph);
+  const shRx = lerp(lerp(swingR, -1.3, c), 1.6, ext), shRz = lerp(lerp(.08, .75, c), -.1, ext);
+  const elR = lerp(lerp(.25, 2.2, c), .05, ext);
+  J['sh1'].rotation.set(shRx, 0, shRz); J['el1'].rotation.x = elR;
+  // left arm: swing, or guard up in front, or a fist in the air on a PERFECT
+  P.guard = lerp(P.guard, (P.charging || P.block > 0 || nearBall()) ? 1 : 0, 1 - Math.exp(-10 * dt));
+  P.cheer = Math.max(0, P.cheer - dt);
+  const swingL = .35 * Math.sin(ph + Math.PI);
+  let shLx = lerp(swingL, 1.15 + P.block * .3, P.guard), shLz = lerp(-.08, .45, P.guard), elL = lerp(.25, 1.55, P.guard);
+  if (P.cheer > 0) { const k = Math.min(1, P.cheer * 3); shLx = lerp(shLx, 2.9, k); shLz = lerp(shLz, -.2, k); elL = lerp(elL, .2, k); }
+  J['sh-1'].rotation.set(shLx, 0, shLz); J['el-1'].rotation.x = elL;
+  P.block = Math.max(0, P.block - dt * 2.5);
+  P.glowM.opacity = c * .95 + ext * .8;
+  P.glowM.color.setRGB(1, .55 + c * .3, .2 + c * .3);
+}
+const nearBall = () => !ball.lost && -ball.p.z > P.d && ballGap() < 5;
 const reachRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .78, .35).multiplyScalar(1.5), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
 scene.add(reachRing);
 const ARC_N = 40;
@@ -806,6 +858,8 @@ const sfx = {
   strike(c) { tone(55, 'sine', .9, .45, .35); noise(.35 + c * .25, .16, 1200, .7); tone(120 + c * 140, 'square', .08, .16, .5); noise(.2, .4, 260, .5, 'lowpass', .02); tone(880 + c * 400, 'triangle', .05, .5, .98, .01); },
   perfect() { [0, 7, 12, 19].forEach((n, i) => tone(523 * Math.pow(2, n / 12), 'triangle', .12, .35, 0, i * .045)); },
   whiff() { noise(.12, .2, 1800, 1.2); },
+  step() { tone(62, 'sine', .12, .12, .6); noise(.04, .08, 400, .8, 'lowpass'); },
+  block() { tone(150, 'triangle', .22, .16, .7); noise(.14, .1, 1100, 1); },
   bonk() { tone(110, 'triangle', .28, .2, .6); noise(.18, .12, 800, 1); },
   clang() { tone(330, 'square', .08, .3, .7); tone(510, 'triangle', .1, .4, .8); noise(.2, .12, 3000, 2); },
   cell(t) { const f = [988, 1318, 1760][t]; tone(f, 'sine', .14, .22); tone(f * 1.5, 'sine', .08, .3, 0, .06); },
@@ -884,7 +938,7 @@ function resetWorld() {
   for (const c of camps) disposeGroup(c.mesh); camps.length = 0;
   for (const t of tumblers) scene.remove(t.mesh); tumblers.length = 0;
   builtStages.clear(); work.length = 0; queued.clear();
-  Object.assign(P, { d: 0, off: 0, toff: 0, stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0, lean: 0, arm: ARM_REST, armV: 0, cheer: 0 });
+  Object.assign(P, { d: 0, off: 0, toff: 0, stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0, guard: 0, block: 0, cheer: 0 });
   P.p.set(xc(0), G(0, xc(0)), 0);
   placeBall(11, 0, .5);
   updateChunks(0, true);
@@ -900,15 +954,14 @@ function start() {
   resetWorld(); chips();
   mode = 'play';
   window.BounceLab && BounceLab.start();
-  $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide'); $('#smackBtn').classList.remove('hide');
-  banner('THE FOOTHILLS', 'Hold STRIKE to wind up · let go as it reaches you');
+  $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide');
+  banner('THE FOOTHILLS', 'Hold anywhere to wind up · slide to steer · let go to punch');
   hud();
 }
 const QUOTES = ['One must imagine Sisyphus happy.', 'The struggle itself toward the heights is enough to fill a heart.', 'The summit was always a little further.', 'He was bored anyway.', 'Back to the bottom. Again.', 'Sisyphus yawns.'];
 function gameOver() {
   mode = 'over'; sfx.over(); drag = null; P.charging = false; $('#touch').classList.remove('on');
   if (chargeGain) chargeGain.gain.value = 0;
-  if (engineGain) engineGain.gain.value = 0;
   const score = S.score, isBest = score > S.best;
   if (isBest) { S.best = score; store.set('summit-best-v3', score); }
   $('#oScore').textContent = score;
@@ -920,7 +973,7 @@ function gameOver() {
   $('#oShards').textContent = S.cells;
   $('#oQuote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
   window.BounceLab && BounceLab.gameOver(score, { altitude: Math.round(S.maxAlt), camps: S.camps, perfects: S.perfects, longest: Math.round(S.longest) });
-  $('#over').classList.remove('hide'); $('#hud').classList.add('hide'); $('#smackBtn').classList.add('hide'); $('#perkChips').innerHTML = '';
+  $('#over').classList.remove('hide'); $('#hud').classList.add('hide'); $('#perkChips').innerHTML = '';
 }
 function banner(t, s) {
   $('#bTitle').textContent = t; $('#bSub').textContent = s || '';
@@ -943,17 +996,18 @@ function addPoints(n, at, label, cls) { const v = Math.round(n * S.mult); S.bonu
 const speedNow = () => Math.min(CFG.speedMax, CFG.speed0 + CFG.speedStep * stageAt(P.d));
 
 // ---------------------------------------------------------------- input
-let drag = null, chargePointer = null;
-const touchEl = $('#touch'), smackBtn = $('#smackBtn');
+let drag = null;
+const touchEl = $('#touch');
 const isUI = t => t && t.closest && t.closest('.ui');
 function beginCharge() { if (mode !== 'play' || P.stun > 0 || ball.lost) return; P.charging = true; }
 function endCharge() { if (!P.charging) return; P.charging = false; strike(P.charge, false); P.charge = 0; }
+// one finger does everything: press anywhere to wind up, slide to steer while holding, let go to punch (a tap is a quick jab)
 window.addEventListener('pointerdown', e => {
   audio();
-  if (isUI(e.target) || mode !== 'play') return;
+  if (isUI(e.target) || mode !== 'play' || drag) return;
   e.preventDefault();
-  if (drag) { chargePointer = e.pointerId; beginCharge(); return; }
   drag = { id: e.pointerId, x: e.clientX };
+  beginCharge();
   touchEl.style.left = e.clientX + 'px'; touchEl.style.top = e.clientY + 'px'; touchEl.classList.add('on');
 }, { passive: false });
 window.addEventListener('pointermove', e => {
@@ -964,9 +1018,9 @@ window.addEventListener('pointermove', e => {
   touchEl.style.left = e.clientX + 'px'; touchEl.style.top = e.clientY + 'px';
 });
 function endPointer(e) {
-  if (chargePointer === e.pointerId) { chargePointer = null; endCharge(); return; }
   if (!drag || e.pointerId !== drag.id) return;
   drag = null; touchEl.classList.remove('on');
+  endCharge();
 }
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
@@ -981,8 +1035,6 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Space') endCharge(); });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
-smackBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audio(); smackBtn.classList.add('down'); try { smackBtn.setPointerCapture(e.pointerId); } catch {} beginCharge(); });
-for (const ev of ['pointerup', 'pointercancel']) smackBtn.addEventListener(ev, () => { smackBtn.classList.remove('down'); endCharge(); });
 $('#playBtn').addEventListener('click', start);
 $('#againBtn').addEventListener('click', start);
 $('#mute').addEventListener('click', () => { muted = !muted; store.set('summit-muted', muted); $('#mute').textContent = muted ? '🔇' : '🔊'; if (master) master.gain.value = muted ? 0 : .55; });
@@ -1011,7 +1063,7 @@ function strikeVel(c, perfect, out) {
 function strike(charge, auto) {
   if (mode !== 'play' || P.stun > 0 || ball.lost) return;
   const gap = ballGap(), ahead = -ball.p.z > P.d - .4;
-  P.release = 1; P.armV = -22 - charge * 18;
+  P.release = 1;
   const c = Math.max(.12, charge);
   if (gap < reachNow() && ahead) {
     P.cool = .25;
@@ -1124,7 +1176,7 @@ function stepTitan(dt) {
   P.stun = Math.max(0, P.stun - dt); P.stagger = Math.max(0, P.stagger - dt);
   prevP.copy(P.p);
   const sp = speedNow() * (P.stun > 0 ? .35 : P.stagger > 0 ? .55 : 1) * (S.grace > 0 ? .5 : 1);
-  P.d += sp * dt; P.tread += sp * dt;
+  P.d += sp * dt; P.speedNow = sp;
   const steerMax = CFG.steerMax * (S.perks.steady ? 1.35 : 1);
   P.off += clamp((P.toff - P.off) * CFG.steer * (S.perks.steady ? 1.3 : 1), -steerMax, steerMax) * dt * (P.stun > 0 ? .3 : 1);
   P.off = clamp(P.off, -hwAt(P.d) + .9, hwAt(P.d) - .9);
@@ -1152,8 +1204,17 @@ function stepTitan(dt) {
   const gap = ballGap();
   if (gap < 0 && !ball.lost) {
     ball.p.addScaledVector(nrm, -gap);
-    if (P.charging && P.charge > .15) {
-      const c = P.charge * .75; P.charging = false; P.charge = 0; strike(c, true);
+    if (P.charging) { // guard is up: the left forearm takes it and shoves it back up the hill. Keeps your combo and your wind-up.
+      const rel = gv.subVectors(ball.v, P.v).dot(nrm);
+      if (rel < 0) ball.v.addScaledVector(nrm, -(1 + .15) * rel);
+      if (P.bumpCool <= 0) {
+        P.bumpCool = .45; P.block = 1; P.stagger = .2;
+        const bd = -ball.p.z;
+        ball.v.set((xc(bd + 6) - ball.p.x) * .6, 5, -(speedNow() + 5));
+        ball.flying = false;
+        sfx.block(); dustAt.copy(ball.p).addScaledVector(nrm, -ball.r); dust(dustAt, 8, 3); cam.shake = Math.max(cam.shake, .15);
+        pop('block', ball.p.clone().setY(ball.p.y + 2.2), 'dim');
+      }
     } else {
       const rel = gv.subVectors(ball.v, P.v).dot(nrm);
       if (rel < 0) ball.v.addScaledVector(nrm, -(1 + .15) * rel);
@@ -1262,7 +1323,7 @@ function update(dt) {
 }
 
 // ---------------------------------------------------------------- visuals per frame
-const lookAt = new THREE.Vector3();
+const lookAt = new THREE.Vector3(), scrA = new THREE.Vector3(), scrB = new THREE.Vector3();
 const NIGHT_TOP = new THREE.Color(0x060a18), NIGHT_HOR = new THREE.Color(0x2b3956), DAWN_TOP = new THREE.Color(0x24375c), DAWN_HOR = new THREE.Color(0xf2a36e);
 const CLOUD_NIGHT = new THREE.Color(0x2a3246), CLOUD_DAWN = new THREE.Color(0xf3d2c0);
 const MOON_COL = new THREE.Color(0xdfe8ff), SUN_COL = new THREE.Color(0xffc796), HEMI_NIGHT = new THREE.Color(0x9fb4d8), HEMI_DAWN = new THREE.Color(0xffd6b8);
@@ -1286,43 +1347,29 @@ function predictArc() {
   arcLand.material.color.setRGB(1, bad ? .3 : .8, bad ? .2 : .4).multiplyScalar(1.6);
 }
 function render(dt, t) {
-  // the arm swings back over the cab while winding up, then slams through on release
+  // Sisyphus: walk, wind up, punch, guard; turns to follow the road
   const c = P.charging ? P.charge : 0;
-  P.release = Math.max(0, P.release - dt * 3.5);
-  const target = P.charging ? lerp(ARM_REST + .3, ARM_BACK, c) + (c > .97 ? Math.sin(t * 50) * .03 : 0) : ARM_REST;
-  if (P.release > .75) { P.arm += P.armV * dt; if (P.arm < ARM_FOLLOW) { P.arm = ARM_FOLLOW; P.armV = 0; } }
-  else P.arm = lerp(P.arm, target, 1 - Math.exp(-(P.charging ? 9 : 7) * dt));
-  P.pivot.rotation.x = P.arm;
-  P.lean = lerp(P.lean, c * .09 - (P.release > .6 ? .08 : 0), 1 - Math.exp(-12 * dt));
+  P.release = Math.max(0, P.release - dt * 3.2);
+  poseFigure(dt, t, mode === 'play' ? (P.speedNow || speedNow()) : 0);
   const g = P.group;
-  g.position.copy(P.p); g.position.y += (P.stun > 0 ? Math.sin(t * 40) * .05 : 0);
-  const pitch = Math.atan(Hp(P.d)), yaw = -Math.atan(xcp(P.d));
-  g.rotation.set(pitch, yaw, 0, 'YXZ');
-  P.body.rotation.x = P.lean;
-  P.body.rotation.z = lerp(P.body.rotation.z, -clamp((P.toff - P.off) * .025, -.08, .08), .2);
-  P.treadMap.offset.y = -P.tread * .3;
-  P.chargeM.opacity = c * .95 + (P.release > 0 ? P.release * .6 : 0);
-  const stunned = P.stun > 0;
-  P.neonM.color.setRGB(stunned ? 1 : .45 + c * .55, stunned ? .3 : .95 - c * .4, stunned ? .2 : 1 - c * .8).multiplyScalar(2);
-  // Sisyphus: chin on fist, the odd sigh, a fist in the air on a perfect
-  P.cheer = Math.max(0, P.cheer - dt);
-  P.sisHead.rotation.z = Math.sin(t * .7) * .08;
-  P.sis.position.y = 1.7 + Math.sin(t * 1.1) * .015;
-  P.sisArmL.rotation.x = lerp(P.sisArmL.rotation.x, P.cheer > 0 ? -2.6 : 0, .2);
+  g.position.copy(P.p);
+  P.yaw = lerp(P.yaw, -Math.atan(xcp(P.d)) - clamp((P.toff - P.off) * .04, -.25, .25), 1 - Math.exp(-8 * dt));
+  g.rotation.set(0, P.yaw, 0);
+  // see-through when the boulder is behind him from the camera's point of view
+  scrA.copy(ball.p).project(camera); scrB.copy(P.p).setY(P.p.y + 1.8).project(camera);
+  const behind = Math.abs(scrA.x - scrB.x) < .28 && Math.abs(scrA.y - scrB.y) < .45 && camera.position.distanceToSquared(ball.p) > camera.position.distanceToSquared(P.p);
+  P.fade = lerp(P.fade, behind ? .45 : 1, 1 - Math.exp(-10 * dt));
+  for (const m of figMats) { m.opacity = P.fade; m.depthWrite = P.fade > .95; }
   const gap = ballGap();
   const inReach = gap < reachNow() && -ball.p.z > P.d - .4 && !ball.lost;
   reachRing.position.set(P.p.x, P.p.y + .08, P.p.z);
-  reachRing.rotation.set(-Math.PI / 2 + pitch, 0, 0);
+  reachRing.rotation.set(-Math.PI / 2 + Math.atan(Hp(P.d)), 0, 0);
   reachRing.scale.setScalar(CFG.bodyR + reachNow() + ball.r * .3);
   reachRing.material.opacity = lerp(reachRing.material.opacity, inReach ? .8 : (P.charging ? .3 : .05), .25);
-  smackBtn.classList.toggle('ready', P.cool <= 0 && !P.charging);
-  smackBtn.classList.toggle('inreach', inReach && !P.charging);
-  smackBtn.classList.toggle('charging', P.charging);
-  smackBtn.style.setProperty('--p', P.charging ? P.charge.toFixed(3) : 1);
-  smackBtn.style.setProperty('--c', P.charge.toFixed(3));
-  smackBtn.style.setProperty('--rc', P.charging ? (P.charge > .95 ? '#ffd27a' : '#ff8a3a') : 'var(--accent)');
+  touchEl.style.setProperty('--c', P.charge.toFixed(3));
+  touchEl.classList.toggle('reach', inReach);
+  touchEl.classList.toggle('full', P.charge > .97);
   if (chargeGain) { chargeGain.gain.value = P.charging ? .03 + P.charge * .05 : 0; chargeOsc.frequency.value = 55 + P.charge * 90; }
-  if (engineGain) { engineGain.gain.value = mode === 'play' ? .02 : 0; engineOsc.frequency.value = 34 + speedNow() * 2 + c * 10; }
   const showArc = S.perks.arc && P.charging && !ball.lost && mode === 'play';
   arc.visible = arcLand.visible = !!showArc;
   if (showArc) predictArc();
@@ -1346,16 +1393,16 @@ function render(dt, t) {
   stepParts(dt); stepDust(dt); stepPops(dt);
   // camera: low and close behind the crawler, eases back as you wind up, kicks on impact
   cam.kick = Math.max(0, cam.kick - dt * 4);
-  const back = 7.6 + c * 1.2 - cam.kick * .6, up = 4.4 + c * .4, ahead = 18;
+  const back = 7.2 + c * 1.1 - cam.kick * .6, up = 4.9 + c * .35, ahead = 18;
   const cd = P.d - back;
-  const tx = xc(cd) + P.off * .9 - 1.3, ty = Math.max(H(cd), H(P.d) - 1.2) + up;
+  const tx = xc(cd) + P.off * .9 + 1.5, ty = Math.max(H(cd), H(P.d) - 1.2) + up;
   cam.x = lerp(cam.x, tx, 1 - Math.exp(-9 * dt));
   cam.y = lerp(cam.y, ty, 1 - Math.exp(-8 * dt));
   cam.z = lerp(cam.z, -cd, 1 - Math.exp(-12 * dt));
   let ly = H(P.d + ahead) + 2.4;
   if (!ball.lost) ly += Math.max(0, ball.p.y - (G(-ball.p.z, ball.p.x) + 4)) * .3;
   cam.lookY = lerp(cam.lookY, ly, 1 - Math.exp(-4 * dt));
-  cam.lookX = lerp(cam.lookX, xc(P.d + ahead) + P.off * .6 + 1.6, 1 - Math.exp(-5 * dt));
+  cam.lookX = lerp(cam.lookX, xc(P.d + ahead) + P.off * .6 + .8, 1 - Math.exp(-5 * dt));
   cam.shake = Math.max(0, cam.shake - dt * 1.6);
   const sh = cam.shake * cam.shake;
   camera.position.set(cam.x + rnd(-1, 1) * sh, cam.y + rnd(-1, 1) * sh, cam.z);
@@ -1406,7 +1453,6 @@ function render(dt, t) {
     sp.needsUpdate = true;
     snowPts.position.set(camera.position.x, camera.position.y - 5, camera.position.z);
   }
-  if (mode === 'play' && Math.random() < dt * 6) { dustAt.copy(P.stackTop); P.body.localToWorld(dustAt); dust(dustAt, 1, .8); }
 }
 
 // ---------------------------------------------------------------- resize, warm-up & loop

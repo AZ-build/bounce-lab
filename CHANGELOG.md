@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [Summit v4 "Sisyphus"] - 2026-11-23
+- No more STRIKE button. One finger does it all: press anywhere to wind up, slide side to side to steer while holding, let go to punch. A quick tap is a quick jab. A ring under your finger fills as you wind up and turns gold when the boulder is in reach
+- The crawler is gone: you play Sisyphus himself, a 3.6 m marble figure in a dark wrap, leather straps, sandals and a laurel wreath, trudging uphill with a walk cycle and footsteps. His right fist wears a steel gauntlet with charge rings
+- Winding up crouches him, twists his torso and cocks his right arm back with the elbow up; letting go throws a lunging punch. His left forearm (leather bracer) comes up as a guard while winding up or when the boulder is close
+- While your guard is up, a boulder that rolls into him is blocked: shoved back uphill, no combo lost, wind-up kept. If you're not holding, it's a bonk (stagger, combo reset)
+- He raises a fist after a PERFECT; he turns slightly as you steer
+- Camera now sits over his right (punching) shoulder, a little closer
+- v3 kept at versions/v3.html
+
 ## [Summit v3 "The Climb"] - 2026-11-22
 - New player piece: a tracked lab crawler (brushed steel, concrete counterweight, neon trim, scrolling treads, exhaust puffs) with a sledgehammer arm. Winding up swings the hammer back over the cab and leans the crawler back; letting go slams it through. A small marble Sisyphus in a laurel wreath rides on the back with his chin on his fist, and throws a fist up on a PERFECT
 - Bigger, heavier boulder (radius 2.0, more mass, less bounce, heavier gravity) and stronger hits (up to about 27 m/s forward). Heavy hits freeze for a split second (hit-stop) and kick the camera

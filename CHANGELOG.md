@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [Lab 1.6.1] - 2026-11-22
+- New app icon in the lab style: a steel ball with magenta neon seams hovering over the brushed-steel track, concrete wall panels with tie holes, cyan floor strip. Icon links carry `?v=3` so phones pick up the new one
+
 ## [Lab 1.6] - 2026-11-22
 - Everything on the floor now matches the concrete-and-neon wall:
   - Balls are gunmetal steel spheres with glowing neon seams (tennis-ball curve) that really roll. Layers: steel body + energy halo, rotating seams, fixed reflections (highlight + the cyan floor strip mirrored in the ball)

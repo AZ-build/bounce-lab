@@ -138,13 +138,13 @@ window.BOUNCE_LAB_GAMES = [
   {
     "id": "summit",
     "title": "Summit",
-    "tagline": "Hurl the boulder up an endless valley",
-    "description": "Sisyphus is bored. Your steel Titan never stops walking up the valley: wind up, hurl the boulder ahead and time the next hit as it rolls back. Earn advantages at every camp.",
-    "controls": "Drag to steer, hold STRIKE to wind up, let go to hurl",
+    "tagline": "Smash the boulder up an endless mountain",
+    "description": "Sisyphus is bored. He rides a lab crawler with a sledgehammer arm up an endless mountain road: wind up, smash the giant boulder ahead, and time the next hit as it rolls back. Climb through the clouds into the sunrise.",
+    "controls": "Drag to steer, hold STRIKE to wind up the hammer, let go to smash",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v2",
-    "versionName": "The Valley",
+    "version": "v3",
+    "versionName": "The Climb",
     "added": "2026-11-22",
     "updated": "2026-11-22",
     "status": "prototype",
@@ -158,6 +158,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v2",
         "name": "The Valley",
         "file": "versions/v2.html"
+      },
+      {
+        "v": "v3",
+        "name": "The Climb",
+        "file": "versions/v3.html"
       }
     ]
   }

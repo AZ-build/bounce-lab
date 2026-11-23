@@ -14,7 +14,7 @@
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
 | rebound | Rebound | v3 Striker | v1–v3 | Session 2: 3D Rocket-League-style striker (three.js bundled inline) |
 | ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
-| summit | Summit | v2 The Valley | v1–v2 | Session 4: evolution of Rebound. Auto-walking Titan, wind-up strikes, natural valley, camp perks |
+| summit | Summit | v3 The Climb | v1–v3 | Session 4: evolution of Rebound. Auto-driving hammer crawler + Sisyphus, wind-up strikes, mountain road, camp perks |
 
 ## How a game plugs in
 - One script tag: `<script src="../../lab/lab.js" data-game="<id>" data-version="vN">`
@@ -58,10 +58,11 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Every new version: keep the old file in `versions/`, update `games.js`
 - Phone-first; lab UI stops touches from reaching the game
 
-## Summit notes (v2)
-- Source: `games/summit/src/` (main.js, template.html, build.mjs). Bundled with esbuild into one self-contained index.html, three.js inline like Rebound. `npm install && npm run build` in that folder writes ../index.html and ../versions/v2.html
-- Tuning: `CFG` (gravity, boulder, Titan size, walk speed per stage, charge time, throw power range, reach) and `STAGES` (slope, rocks, rockfall, crevasses, blast doors, ridge) at the top of main.js. Advantages are in `PERKS`
-- The valley: `H(d)` floor height at distance d up the path (d = -z), `xc(d)` the winding centre line, `G(d, x)` ground height anywhere (floor bowl + valley walls, or the ridge drop-off). Crevasses come from `gapsFor(stage)` (seeded; the slope adds a landing ledge after each gap)
-- Controls: drag steers `P.toff`; `beginCharge()` / `endCharge()` wind up and release; `strike(charge, auto)`
-- Test hook: `window.__summit` exposes state, `update()`, `strike()`, `offerPerks()`, `takePerk()` for automated playtests
-- Best score saved as `summit-best-v2` (v1 used `summit-best`); mute as `summit-muted`
+## Summit notes (v3)
+- Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v3.html. Older versions in versions/ are frozen archives
+- Tuning: `CFG` (gravity, boulder size/mass, crawler size, drive speed per stage, charge time, throw power range, reach, cloud height) and `STAGES` at the top of main.js. Advantages are in `PERKS`
+- The road: `H(d)` road height at distance d (d = -z), `xc(d)` winding centre line, `G(d, x)` ground anywhere (banked road, `cliffY` on the left, `dropY` berm + drop on the right, ridge drop-off in Ridge stages). Crevasses from `gapsFor(stage)` (seeded; a landing ledge follows each gap)
+- Crawler: built in the IIFE after the boulder; arm pose `P.arm` (ARM_REST / ARM_BACK / ARM_FOLLOW) set in `render()`; collision is an upright capsule (`CFG.bodyR`, `CFG.bodyH`)
+- Performance rules: never add/remove lights at runtime; reuse shared geometries (`SHARED_GEOS` are never disposed); new world pieces go through `queue()` / `doWork()`; new object types should be added to the warm-up block so their shaders compile behind the title screen
+- Test hook: `window.__summit` (state, `update()`, `strike()`, `offerPerks()`, `takePerk()`, `doWork()`, `buildStage()`, `buildChunk()`)
+- Best score saved as `summit-best-v3`; mute as `summit-muted`

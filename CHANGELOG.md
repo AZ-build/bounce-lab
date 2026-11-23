@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [Summit v3 "The Climb"] - 2026-11-22
+- New player piece: a tracked lab crawler (brushed steel, concrete counterweight, neon trim, scrolling treads, exhaust puffs) with a sledgehammer arm. Winding up swings the hammer back over the cab and leans the crawler back; letting go slams it through. A small marble Sisyphus in a laurel wreath rides on the back with his chin on his fist, and throws a fist up on a PERFECT
+- Bigger, heavier boulder (radius 2.0, more mass, less bounce, heavier gravity) and stronger hits (up to about 27 m/s forward). Heavy hits freeze for a split second (hit-stop) and kick the camera
+- Throws aim down the winding road toward where it will be when the boulder lands
+- The world is now a mountain road: a stepped cliff with ledges and pines on the left, a rocky berm and a long drop on the right, the road banked gently toward the cliff. Colour follows real altitude: grass and pines low, bare rock, then snow on the ledges and falling snow
+- A sense of climbing: night at the bottom turns into sunrise as you gain height; you climb through a cloud layer (thick fog) and then the cloud sea stays below you; lab lights far down in the valley; two rings of distant ranges anchored in height so you rise past them; a ridged summit massif with a beacon that never gets any closer
+- Freeze fixes: no lights are added or removed mid-game (v2's camp lamps forced every shader to rebuild = the freezes); terrain and course pieces are built a little per frame from a queue; shared geometry for rocks, pines, cells and doors; everything is compiled once behind the title screen; resolution (then bloom) steps down automatically if frames stay slow
+- Energy cells hide when they'd pass through the camera
+- Best score key is now `summit-best-v3`
+
 ## [Lab 1.8.1] - 2026-11-22
 - Gravity control is now a wall-mounted dial up beside the header (mirrors the Energy readout) instead of a tall slider over the track. Turn it like a knob, drag up/right or down/left, or scroll over it. A neon arc and needle show the setting; double-tap resets to 1g
 - Balls spread across the full width of the track again

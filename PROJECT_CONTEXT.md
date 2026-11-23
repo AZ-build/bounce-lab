@@ -36,6 +36,12 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 - Lobby physics knobs: `BR` (ball size, 0.75 × R), `G` (gravity, H × 1.6), `V` (parade speed) in `layout()`; per-game hop feel in `PERSONALITY`
 - Cards show the current version only; older ones live under "Earlier versions"
 
+## Lobby mini-game (Lab 1.7)
+- Gravity: `G = G0 × gMul`, set by `setGravity()` from the fader (`#grav`). `hop()` keeps launch speed fixed, so gravity changes hop height
+- Surge: `surge()`, recharge time `SURGE_TIME`, lightning in `zaps`
+- Rewards: `CELL` tiers (colour, value, height range), `collectCell()`, power thresholds `POWER_AT`, `powerUp()`. Each wall tube has a power level it needs (`fixtures()`); unlit tubes use `offSprite()`
+- Best energy saved in localStorage as `bouncelab-lobby-energy`
+
 ## Installable app
 `manifest.webmanifest` + `icons/` + `sw.js` at the site root. The service worker is network-first, so online visitors always get fresh files. Bump `CACHE` in sw.js only if you need to wipe everyone's offline copy. The icon is drawn by a small script (see icons/icon.svg, exported with rsvg-convert)
 

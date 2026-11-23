@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [Lab 1.7] - 2026-11-22
+- The lobby is now a little game:
+  - Gravity fader (right edge): slide from 0.3g to 2.5g. Balls launch at the same speed, so low gravity sends them higher and floatier, heavy gravity keeps them low and quick. Dust on the wall drifts up or sinks to show it. Double-tap resets to 1g; arrow keys work too
+  - Surge button (bottom left): lightning from the track kicks every ball upward. Recharges in about 3 seconds (collecting cells speeds it up). Space bar also surges
+  - Energy cells replace stars: glass capsules with steel caps and glowing cores. Amber (low, 1), cyan (higher, 3), magenta (near the ceiling, rare, 8). Chains within about 2 seconds multiply
+  - Lab power: energy raises the power level (15 / 45 / 100 / 180 / 300). Dark tubes on the wall flicker on as power rises, until the whole lab is lit
+  - Wall-mounted Energy readout with power pips and best score (saved on the device)
+- Share moved up next to sound; tapping empty space no longer makes balls jump (Surge does that now)
+- Messages now pop up above the bottom buttons instead of over the sign
+
 ## [Lab 1.6.1] - 2026-11-22
 - New app icon in the lab style: a steel ball with magenta neon seams hovering over the brushed-steel track, concrete wall panels with tie holes, cyan floor strip. Icon links carry `?v=3` so phones pick up the new one
 

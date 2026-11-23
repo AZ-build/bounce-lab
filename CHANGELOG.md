@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [Lab 1.4] - 2026-11-22
+- Lobby redesign: calm dusk scene (soft hills, no neon grid or city), Bricolage Grotesque type, sentence case everywhere. The balls are the only bright colours on screen
+- Happier bounces: balls are 75% of their old size, gravity is about 40% lighter, hops are higher and steadier, the wobble on landing is softer, collisions are gentler, leapfrogs happen about half as often, and the parade moves a bit slower
+- Game card trimmed down: name, one-line description, how to play, a big Play button. Rating and plays on one quiet line, top 3 scores, one-tap rating with an optional note. Version chips, the stats grid and the version picker are gone
+- Earlier versions are tucked into a collapsed "Earlier versions" link at the bottom of each card. Play and every shared link always open the latest version
+- "New" tag shows only on the most recently added game, for its first week
+- Installable app (PWA): app icon (icons/), manifest.webmanifest, offline helper (sw.js, always fetches the newest files when online). Install button appears in the lobby on Android/desktop Chrome; on iPhone use Share, then Add to Home Screen
+- In-game overlay restyled to match (font, colours, sentence-case buttons)
+
 ## [Lab 1.3] - 2026-11-22
 - GoatCounter connected: https://bounce-lab.goatcounter.com (page views + events)
 

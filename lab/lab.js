@@ -82,10 +82,10 @@
     const root = document.createElement('div');
     root.id = 'bl-root';
     root.innerHTML = `
-      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>LAB</a><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
+      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>Lab</a><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
       <div id="bl-bar" role="toolbar" aria-label="Bounce Lab">
         <button class="bl-home" aria-label="Back to the lab">&#9664;</button>
-        ${NO_BOARD ? '<button class="bl-board bl-fbbtn"><span>Leave feedback</span></button>' : '<button class="bl-board"><span>&#127942; Board</span></button>'}
+        ${NO_BOARD ? '<button class="bl-board bl-fbbtn"><span>Leave feedback</span></button>' : '<button class="bl-board"><span>Scores</span></button>'}
         <button class="bl-sharebtn" aria-label="Share your score"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button>
         <button class="bl-stars" aria-label="Rate this game"><div class="bl-starrow">${[1,2,3,4,5].map(i => `<span class="bl-star" data-s="${i}">&#9733;</span>`).join('')}</div></button>
       </div>
@@ -100,8 +100,8 @@
         </div>
         <div class="bl-body">
           <div class="bl-pane" data-pane="lb">
-            <div class="bl-yours"><div class="bl-lbl">YOUR SCORE</div><div class="bl-num">&ndash;</div><div class="bl-rank"></div></div>
-            <div class="bl-post"><input id="bl-name" maxlength="16" placeholder="Your name" autocomplete="nickname" enterkeyhint="send"><button class="bl-btn" id="bl-postbtn">POST</button></div>
+            <div class="bl-yours"><div class="bl-lbl">Your score</div><div class="bl-num">&ndash;</div><div class="bl-rank"></div></div>
+            <div class="bl-post"><input id="bl-name" maxlength="16" placeholder="Your name" autocomplete="nickname" enterkeyhint="send"><button class="bl-btn" id="bl-postbtn">Post score</button></div>
             <ol class="bl-list" id="bl-list"></ol>
             <div class="bl-muted" id="bl-lbmsg"></div>
           </div>
@@ -111,7 +111,7 @@
               <div class="bl-starrow">${[1,2,3,4,5].map(i => `<button class="bl-star" data-s="${i}" aria-label="${i} stars">&#9733;</button>`).join('')}</div>
               <div class="bl-tags">${TAGS.map(t => `<button class="bl-tagb">${t}</button>`).join('')}</div>
               <textarea id="bl-text" maxlength="1000" placeholder="What felt good? What didn't? Any ideas?"></textarea>
-              <div class="bl-row"><button class="bl-btn" id="bl-send">SEND</button></div>
+              <div class="bl-row"><button class="bl-btn" id="bl-send">Send</button></div>
             </div>
             <div class="bl-thanks"><b>Thanks!</b>Your feedback goes straight to the lab notebook.<div style="margin-top:14px"><button class="bl-btn bl-ghost" id="bl-more">Send more</button></div></div>
           </div>
@@ -120,6 +120,8 @@
       </div>
       <div id="bl-toast"></div>`;
     document.body.appendChild(root);
+    if (!document.querySelector('link[data-bl-font]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.blFont = '1'; f.href = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap'; document.head.appendChild(f); }
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register(new URL('sw.js', ROOT_URL).href).catch(() => {});
     ui = { root };
 
     // Keep taps and key presses inside the lab UI from reaching the game.
@@ -205,12 +207,12 @@
       const rk = r && r.rank ? `#${r.rank}${r.total ? ' of ' + fmt(r.total) : ''}` : 'Posted';
       $('.bl-rank').textContent = r && r.rank ? 'Rank ' + rk : 'Posted!';
       $('.bl-board span').innerHTML = r && r.rank ? `&#127942; <b>#${r.rank}</b>` : '&#127942; Posted';
-      btn.textContent = 'POSTED';
+      btn.textContent = 'Posted';
       toast(r && r.rank ? 'Score posted · ' + rk : 'Score posted');
       S.track(GAME + '/post-score', 'Posted score');
       if (ui.root.classList.contains('bl-open')) refreshBoard();
     } catch (e) {
-      state.posted = false; btn.disabled = false; btn.textContent = 'RETRY';
+      state.posted = false; btn.disabled = false; btn.textContent = 'Try again';
       toast('Could not post. Check your connection.');
     }
   }
@@ -219,7 +221,7 @@
     const list = $('#bl-list'), msg = $('#bl-lbmsg');
     if (state.score == null) { $('.bl-num').innerHTML = '&ndash;'; }
     $('.bl-post').style.display = state.score == null || state.posted ? 'none' : 'flex';
-    if (!state.posted) { const b = $('#bl-postbtn'); b.disabled = false; b.textContent = 'POST'; }
+    if (!state.posted) { const b = $('#bl-postbtn'); b.disabled = false; b.textContent = 'Post score'; }
     msg.textContent = 'Loading...';
     try {
       const rows = await S.topScores(GAME, 10);
@@ -251,6 +253,6 @@
       $('#bl-text').value = ''; ui.root.querySelectorAll('.bl-tagb.on').forEach(b => b.classList.remove('on'));
       $('.bl-form').style.display = 'none'; $('.bl-thanks').style.display = 'block';
     } catch (e) { toast('Could not send. Try again in a moment.'); }
-    btn.disabled = false; btn.textContent = 'SEND';
+    btn.disabled = false; btn.textContent = 'Send';
   }
 })();

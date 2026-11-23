@@ -27,6 +27,15 @@
 ## Lobby
 A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game feel is in `PERSONALITY`; leapfrogs are in `maybeLeapfrog()`. The course (blocks, pillars, springs, stars) is generated in `spawnCourse()`.
 
+## Look and feel (Lab 1.4)
+- Palette: night #0e1230, dusk #2b2660, sheet #151937, raised #1d2246, text #eef0ff, soft #b7bbe0, muted #7f84b0, sun #ffc94d. Game ball colours are the only saturated colours
+- Type: Bricolage Grotesque (Google Fonts), sentence case, no all-caps labels
+- Lobby physics knobs: `BR` (ball size, 0.75 × R), `G` (gravity, H × 1.6), `V` (parade speed) in `layout()`; per-game hop feel in `PERSONALITY`
+- Cards show the current version only; older ones live under "Earlier versions"
+
+## Installable app
+`manifest.webmanifest` + `icons/` + `sw.js` at the site root. The service worker is network-first, so online visitors always get fresh files. Bump `CACHE` in sw.js only if you need to wipe everyone's offline copy. The icon is drawn by a small script (see icons/icon.svg, exported with rsvg-convert)
+
 ## Sharing
 `S.share()` / `S.siteUrl()` are in store.js. Challenge links use `?vs=<score>&by=<name>`, handled in lab.js. Preview images come from `tools/make_share_images.py`; rerun it after adding a game.
 

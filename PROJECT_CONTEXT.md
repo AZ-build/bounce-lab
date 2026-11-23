@@ -6,7 +6,7 @@
 **Firebase project:** `bounce-lab-ebfbd` (dedicated to Bounce Lab).
 **Data:** Firebase Firestore, collection `bouncelab_games/{gameId}` with `scores`, `feedback` and `sessions` subcollections plus summary counters. Demo mode falls back to localStorage.
 **Analytics:** GoatCounter (page views + events like `ascent/gameover`).
-**Admin:** `/admin/`, gated by Firebase Google sign-in plus the `adminEmails` in config and `isAdmin()` in rules.
+**Admin:** `/admin/`, gated by Firebase Google sign-in plus `isAdmin()` in the Firestore rules (the email lives only in the rules).
 
 ## Games (Nov 2026)
 | id | Title | Current | Versions kept | Origin |
@@ -29,6 +29,9 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 
 ## Sharing
 `S.share()` / `S.siteUrl()` are in store.js. Challenge links use `?vs=<score>&by=<name>`, handled in lab.js. Preview images come from `tools/make_share_images.py`; rerun it after adding a game.
+
+## Releasing
+Bump the `?v=` number on script tags in index.html, admin/index.html and games/*/index.html (GitHub Pages lets browsers cache files for 10 minutes). The test game id `zz-test` exists in Firestore from the live connection check; it's ignored by the lobby and admin.
 
 ## Conventions
 - Lobby registry is `games.js` (not JSON) so the site also works when opened from disk

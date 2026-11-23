@@ -57,7 +57,9 @@ It records page views for the lobby and each game, plus events such as `ascent/s
 ---
 
 ## The admin page
-https://az-build.github.io/bounce-lab/admin/ is not linked anywhere, so bookmark it. Sign in with the email from step 2.
+https://az-build.github.io/bounce-lab/admin/ is not linked anywhere, so bookmark it. Sign in with the Google account whose email you put in the rules (step 2). The rules decide who's admin; nothing else to set.
+
+**Status (Nov 22):** all four Firebase steps done and tested live. Scores, plays, ratings and feedback save, and the rules block faked numbers.
 
 ## Sharing
 - **Each game has its own link:** `https://az-build.github.io/bounce-lab/games/ascent/` (or `bouncer`, `rebound`). Pasted into iMessage, Slack, Discord, X and similar apps, it shows a preview card with the game's art.
@@ -69,7 +71,7 @@ https://az-build.github.io/bounce-lab/admin/ is not linked anywhere, so bookmark
 |---|---|
 | Still says DEMO MODE | `apiKey` or `appId` in `lab/config.js` is empty (step 4 not done yet) |
 | "Leaderboard is offline" | Step 1 or step 2 isn't finished (database not created, or rules not published) |
-| Admin says "not on the admin list" | The email in `lab/config.js` doesn't match the account you signed in with |
+| Admin says this account "isn't the admin email" | Sign in with the Google account whose email is in the Firestore rules (line 15), or change the rules |
 | Google sign-in popup errors | `az-build.github.io` isn't in Authorized domains (step 3) |
 | Admin shows "Missing or insufficient permissions" | Your email isn't in the rules (step 2.4), or the rules weren't published |
 | Link preview shows an old picture | Apps cache previews for a while. New links refresh on their own |

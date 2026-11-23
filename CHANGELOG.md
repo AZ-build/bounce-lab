@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [Lab 1.2] - 2026-11-22
+- Firebase connected (bounce-lab-ebfbd). Tested live: post score, rank, plays counter, rating + rating change, feedback all save; visitors can't read feedback; faked counters, oversized scores, extra fields and deletes are refused
+- Admin access is now decided only by the Firestore rules (no email in config)
+- Script links carry `?v=1.2` so updates show up immediately. Bump it on each release
+
 ## [Lab 1.1] - 2026-11-22
 - Lobby reworked into a side-scrolling parade: balls hop along on their own with per-game personalities, clear blocks and pillars, launch off springs, leapfrog each other and bounce off each other's heads. Tap empty space (or Space) makes them all jump to grab stars; flinging still works
 - Sharing: lobby Share button, Share on each game card, share button in every game (top left), score-challenge links (`?vs=&by=`) with "beat it" and "you beat it" messages

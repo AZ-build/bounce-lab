@@ -11,6 +11,7 @@
   if (window.BounceLab && window.BounceLab._ready !== undefined) return;
   const me = document.currentScript;
   const LAB_URL = new URL('./', me.src);                 // .../lab/
+  const VQ = (new URL(me.src).search.match(/v=([^&]+)/) || [])[1] ? '?v=' + new URL(me.src).search.match(/v=([^&]+)/)[1] : '';  // cache-buster passed on from the game page
   const ROOT_URL = new URL('../', LAB_URL);              // site root (lobby)
   const GAME = (me.dataset.game || location.pathname.split('/').filter(Boolean).slice(-2, -1)[0] || 'game').toLowerCase();
   const VERSION = me.dataset.version || '';
@@ -36,12 +37,12 @@
   function load(src) {
     return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   }
-  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = new URL('lab.css', LAB_URL).href; document.head.appendChild(css);
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = new URL('lab.css', LAB_URL).href + VQ; document.head.appendChild(css);
 
-  (window.BOUNCE_LAB_CONFIG ? Promise.resolve() : load(new URL('config.js', LAB_URL).href))
+  (window.BOUNCE_LAB_CONFIG ? Promise.resolve() : load(new URL('config.js', LAB_URL).href + VQ))
     .catch(() => {})
-    .then(() => window.BounceLabStore ? null : load(new URL('store.js', LAB_URL).href))
-    .then(() => window.BOUNCE_LAB_GAMES ? null : load(new URL('../games.js', LAB_URL).href).catch(() => {}))
+    .then(() => window.BounceLabStore ? null : load(new URL('store.js', LAB_URL).href + VQ))
+    .then(() => window.BOUNCE_LAB_GAMES ? null : load(new URL('../games.js', LAB_URL).href + VQ).catch(() => {}))
     .then(() => {
       S = window.BounceLabStore;
       const go = () => { buildUI(); API._ready = true; while (queue.length) { const [fn, args] = queue.shift(); API[fn].apply(API, args); } };

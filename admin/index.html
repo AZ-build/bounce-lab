@@ -77,7 +77,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 
   <div class="gate" id="gate" hidden>
     <h1>ADMIN</h1>
-    <p>Sign in with the Google account listed in <code>lab/config.js</code> to see feedback and play data.</p>
+    <p>Sign in with the Google account whose email is in the Firestore rules to see feedback and play data.</p>
     <button class="btn pri" id="signin">Sign in with Google</button>
     <p class="note" id="gateMsg"></p>
   </div>
@@ -119,12 +119,16 @@ $('#fGame').innerHTML += GAMES.map(g => `<option value="${esc(g.id)}">${esc(g.ti
 // ---------- auth ----------
 function showGate(msg) { $('#gate').hidden = false; $('#app').hidden = true; $('#out').hidden = true; $('#gateMsg').textContent = msg || ''; }
 function showApp() { $('#gate').hidden = true; $('#app').hidden = false; $('#out').hidden = !S.online; load(); }
+$('#gate').insertAdjacentHTML('beforeend', '<p><button class="btn" id="out2">Use a different account</button></p>');
+document.addEventListener('click', e => { if (e.target.id === 'out2') S.signOut(); });
 $('#signin').addEventListener('click', () => S.signIn().catch(e => { $('#gateMsg').textContent = 'Sign-in failed: ' + (e.code || e.message); }));
 $('#out').addEventListener('click', () => S.signOut());
+// The Firestore rules decide who is an admin; if they refuse, we say so.
+let who = '';
 S.onAuth(u => {
   if (!S.online) return showApp();
   if (!u) return showGate();
-  if (!S.adminEmails.includes(String(u.email || '').toLowerCase())) return showGate(u.email + ' is not on the admin list.');
+  who = u.email || '';
   showApp();
 });
 
@@ -138,7 +142,11 @@ async function load() {
     DATA[g.id] = { g, summary, sessions, feedback, scores };
   }));
   const failed = results.filter(r => r.status === 'rejected');
-  if (failed.length) $('#err').textContent = 'Some data failed to load: ' + (failed[0].reason && (failed[0].reason.code || failed[0].reason.message));
+  if (failed.length) {
+    const code = failed[0].reason && (failed[0].reason.code || failed[0].reason.message);
+    if (S.online && /permission/i.test(String(code))) return showGate((who || 'This account') + " isn't the admin email in the Firestore rules. Sign out and use that account, or update the rules.");
+    $('#err').textContent = 'Some data failed to load: ' + code;
+  }
   render();
 }
 function inRange(ts) { return Date.now() - ts <= +$('#range').value * DAY; }

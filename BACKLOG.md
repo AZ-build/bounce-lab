@@ -2,7 +2,7 @@
 
 ## Next up
 - [x] GitHub repo + Pages
-- [ ] Firebase: create database, rules, Google sign-in, web app config (docs/SETUP.md)
+- [x] Firebase: database, rules, Google sign-in, web app config
 - [ ] GoatCounter code
 - [ ] Playtest with 3–5 friends and read the admin page before changing any game
 

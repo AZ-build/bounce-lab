@@ -10,17 +10,18 @@ window.BOUNCE_LAB_CONFIG = {
   // 1) FIREBASE — paste the "firebaseConfig" values from your Firebase
   //    project (Project settings → General → Your apps → Web app).
   firebase: {
-    apiKey: "",                                   // ← paste from Firebase
+    apiKey: "AIzaSyAciYZDL4DNuxxSxywXPdNNJvFPjzwu4aI",
     authDomain: "bounce-lab-ebfbd.firebaseapp.com",
     projectId: "bounce-lab-ebfbd",
     storageBucket: "bounce-lab-ebfbd.firebasestorage.app",
     messagingSenderId: "698209398868",
-    appId: ""                                     // ← paste from Firebase
+    appId: "1:698209398868:web:28f17acfb97b6e7d3a7dc1",
+    measurementId: "G-D1QTD8WQMP"
   },
 
-  // 2) ADMIN — the Google account(s) allowed to open the admin page.
-  //    Must match the email in firebase/firestore.rules.
-  adminEmails: ["you@example.com"],
+  // 2) ADMIN — who can open the admin page is decided by the email in the
+  //    Firestore rules (Firebase console → Firestore → Rules → isAdmin).
+  //    Nothing to set here.
 
   // 3) GOATCOUNTER — just the code, e.g. "bouncelab" for
   //    https://bouncelab.goatcounter.com. Leave "" to turn analytics off.

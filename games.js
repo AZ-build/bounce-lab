@@ -65,16 +65,16 @@ window.BOUNCE_LAB_GAMES = [
   },
   {
     "id": "rebound",
-    "title": "Rebound",
-    "tagline": "3D arena striker",
-    "description": "Rocket-League-style: drive a striker around a glass arena, flick the ball into the far goal and jump for aerial hits.",
-    "controls": "Drag to move, flick to smash, tap to jump",
+    "title": "Smashball",
+    "tagline": "1v1 arena striker",
+    "description": "Run your striker at a heavy ball, smash it past the bot and guard your own goal. 2-minute matches",
+    "controls": "Drag anywhere to run (up = toward the ball), tap to jump + smash",
     "color": "#ff9a3c",
     "icon": "goal",
-    "version": "v3",
-    "versionName": "Striker",
+    "version": "v4",
+    "versionName": "Goal",
     "added": "2026-11-19",
-    "updated": "2026-11-20",
+    "updated": "2026-11-23",
     "status": "prototype",
     "versions": [
       {
@@ -91,6 +91,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v3",
         "name": "Striker+",
         "file": "versions/v3.html"
+      },
+      {
+        "v": "v4",
+        "name": "Goal",
+        "file": "versions/v4.html"
       }
     ]
   },

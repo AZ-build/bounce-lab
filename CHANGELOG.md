@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [Smashball v4 "Goal"] - 2026-11-23
+- **Rebound is now Smashball.** The game id and link stay `games/rebound/`, so old links, scores and analytics keep working
+- Rebuilt from scratch as real source (`games/rebound/src/`, same toolkit as Summit) instead of the old sealed bundle
+- 1v1 against a bot in a concrete-and-glass lab arena: you defend the cyan goal, the bot defends the magenta one. 2-minute match; tied at full time = golden goal
+- The rings are gone. The point is the goal
+- You play a tall polished-steel striker (3.5 m, about 1.75x the ball) with one neon band and a visor that shows which way it faces
+- Camera sits close behind your striker, just over its shoulder, and swings round to always keep the ball in front (ball cam). Wide angle sized for a phone. Your striker fades see-through if it would hide the ball
+- Controls: drag anywhere for a floating joystick. Up is always toward the ball, sideways circles it. Tap (or a second finger) = jump + smash: you lunge at the ball if it's close, jump higher for a high ball, and your next touch within half a second is a hard, slightly aim-assisted shot at the goal. The ring under your feet shows when smash is ready
+- Fast strikers: top speed 15 m/s; bot 11 m/s
+- Heavier ball: more gravity, low bounce, rolls to a stop. A ring on the floor shows where it is and how high
+- Bot: gets behind the ball and drives it at your goal, loops round when it's on the wrong side, rushes back when you shoot, smashes when lined up. Speeds up a little when you're winning and late in the match
+- Goal celebration when you score: slow-mo, your striker turns gold and does three hops with two full spins, a gold shockwave rings across the floor, seven fireworks launch off the goal posts, confetti pops over your head, the camera swings round to watch, your score number bumps on the scoreboard, a cheer line ("Top corner!", "Unstoppable!"…) and a bigger fanfare
+- Look matches the lobby: little bloom or haze, formwork-concrete hall with thin neon tubes and recessed ceiling lights, brushed-steel goal frames with a thin neon line. Screens use Tilt Neon sign lettering, Chakra Petch, a steel-bezel scoreboard, a steel round mute button and the neon-rimmed pill button
+- Scoring: goal 100 (smash goal 150), save 30 (touching the ball away when it was heading into your net), win +250. Best saved as `rebound-best-v4`
+- v3 kept at versions/v3.html
+- Lab: the hidden toast no longer peeks out as a dark pill at the top centre of every game (lab.css). Game pages now load lab.js?v=1.8.2
+
 ## [Summit v6 "The Statue"] - 2026-11-23
 - Sisyphus is now one smooth sculpted marble body instead of joined cylinders: muscles, shoulders, neck, knees and elbows flow into each other like a carved statue, and the skin bends with his joints as he moves
 - How it works: the body is sculpted from blended rounded shapes, turned into a single mesh when the game is built, packed small (about 325 KB), and attached to a skeleton so it bends naturally. The cloak is gone so his back muscles show

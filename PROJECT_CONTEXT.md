@@ -12,7 +12,7 @@
 | id | Title | Current | Versions kept | Origin |
 |---|---|---|---|---|
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
-| rebound | Rebound | v3 Striker | v1–v3 | Session 2: 3D Rocket-League-style striker (three.js bundled inline) |
+| rebound | Smashball (was Rebound) | v4 Goal | v1–v4 | Session 2: 3D striker. v4 (Session 5) rebuilt from source: 1v1 vs a bot, ball cam, tap = jump + smash, goal celebration |
 | ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
 | summit | Summit | v6 The Statue | v1–v6 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
 
@@ -22,7 +22,7 @@
 - Hook locations:
   - Bouncer: `startGame()` and `die()`
   - Ascent: `start()`, `gameOver()` and `toMenu()`
-  - Rebound (minified bundle): `Jt="play"` and after `#oRally` is set in the game-over function
+  - Smashball (id `rebound`): `start()` and `endMatch()` in `games/rebound/src/main.js` (edit the source, then `npm run build` in that folder)
   - Summit: `start()` and `gameOver()` in `games/summit/src/main.js` (edit the source, then `npm run build` in that folder)
 - `versions/*.html` are untouched archives with no lab hooks
 
@@ -70,3 +70,14 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Performance rules: never add/remove lights at runtime; reuse shared geometries (`SHARED_GEOS` are never disposed); new world pieces go through `queue()` / `doWork()`; new object types should be added to the warm-up block so their shaders compile behind the title screen
 - Test hook: `window.__summit` (state, `update()`, `strike()`, `offerPerks()`, `takePerk()`, `doWork()`, `buildStage()`, `buildChunk()`)
 - Best score saved as `summit-best-v3`; mute as `summit-muted`
+
+## Smashball notes (id `rebound`, v4)
+- Renamed from Rebound in Nov 2026; the id, folder, URL and localStorage keys stay `rebound`
+- Source: `games/rebound/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v4.html. v1–v3 in versions/ are frozen minified archives
+- Tuning: `CFG` at the top of main.js (arena size, goal size, ball gravity/bounce/roll, striker size/speed/jump, smash window/cooldown/speed/aim assist, bot speed/smash chance, camera distance/height/side offset/field of view, match length)
+- Coordinates: x across, z along the pitch. You defend +z (cyan goal), the bot defends -z (magenta). Walls are planes in `PLANES` (two sides + four chamfered corners) plus the end walls with the goal mouth cut out
+- Ball cam: `cameraUpdate()` swings `camYaw` toward the ball (slower when the ball is right on top of you), sits behind and over the right shoulder, and stays inside the arena (`keepInside()`)
+- Input: floating joystick read in the camera's frame (`playerInput()`); a quick tap or a second finger calls `tap(P)` (jump + dash at the ball + arms `smash`). `hitBall()` handles touches; `smash()` sets the shot
+- Goal celebration: `celebrate()` / `stepCelebration()` / `endCelebration()` with state in `CEL` (hops, spin, fireworks timings `ROCKET_AT`), the floor `shock` ring, and the celebration camera inside `cameraUpdate()`
+- Bot brain: `think(o, s)` (also drives your striker when `S.autoplay` is on, for testing)
+- Test hook: `window.__rebound` (S, P, B, ball, CEL, start, tap, update, think, stick, cameraUpdate, scored)

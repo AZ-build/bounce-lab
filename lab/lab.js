@@ -16,6 +16,42 @@
      BounceLab.exit()                                       // back to the lab
      BounceLab.openFeedback()                               // the lab's rate & feedback sheet
 */
+/* ---------- Bounce Lab sound kit (shared by the lobby and every game) ----------
+   iPhone fixes: (1) Safari silences web audio when the phone's ring/silent switch is on silent, unless the page asks
+   for "playback" audio; (2) sound may only start inside a finished tap (touchend / click), not on touch-down, so
+   contexts created on touch-down get stuck "suspended" (or "interrupted" after a call / app switch). This wakes them
+   on every tap, except when a game paused its own sound on purpose.
+   One sound preference for the whole site: BounceLabSound.muted / BounceLabSound.setMuted(bool) (localStorage bouncelab-muted). */
+(function () {
+  if (window.BounceLabSound) return;
+  const KEY = 'bouncelab-muted';
+  const read = () => { try { const v = localStorage.getItem(KEY); if (v != null) return v === 'true'; for (const k of ['bouncelab-lobby-muted', 'smashball-muted', 'summit-muted']) { const o = localStorage.getItem(k); if (o === 'true') return true; } return localStorage.getItem('bouncer-ascent-muted') === '1'; } catch (e) { return false; } };
+  const session = m => { try { if (navigator.audioSession) navigator.audioSession.type = m ? 'ambient' : 'playback'; } catch (e) {} };
+  let muted = read(); session(muted);
+  window.BounceLabSound = {
+    get muted() { return muted; },
+    setMuted(m) { muted = !!m; try { localStorage.setItem(KEY, String(muted)); } catch (e) {} session(muted); if (!muted) wake(); }
+  };
+  const Native = window.AudioContext || window.webkitAudioContext; if (!Native) return;
+  const live = new Set();
+  function LabAudioContext(opts) {
+    const c = opts ? new Native(opts) : new Native(); live.add(c);
+    const sus = c.suspend.bind(c), res = c.resume.bind(c);
+    c.suspend = function () { c.__held = true; return sus(); };     // the game paused its sound on purpose
+    c.resume = function () { c.__held = false; return res(); };
+    return c;
+  }
+  LabAudioContext.prototype = Native.prototype;
+  try { window.AudioContext = LabAudioContext; if (window.webkitAudioContext) window.webkitAudioContext = LabAudioContext; } catch (e) {}
+  function wake() {
+    for (const c of live) {
+      if (c.state === 'running' || c.state === 'closed' || c.__held) continue;
+      c.resume().catch(() => {});
+      try { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch (e) {}   // a silent blip finishes the unlock on older iPhones
+    }
+  }
+  for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) window.addEventListener(ev, wake, { capture: true, passive: true });
+})();
 (function () {
   'use strict';
   if (window.BounceLab && window.BounceLab._ready !== undefined) return;

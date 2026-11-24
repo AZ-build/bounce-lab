@@ -377,9 +377,9 @@ function stepPops(dt) {
 }
 
 // ---------------------------------------------------------------- sound
-let ac = null, master = null, noiseBuf = null, muted = store.get('smashball-muted', false), rollOsc = null, rollGain = null;
+let ac = null, master = null, noiseBuf = null, muted = !!(window.BounceLabSound && BounceLabSound.muted), rollOsc = null, rollGain = null;
 function audio() {
-  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  if (ac) { if (ac.state !== 'running') ac.resume().catch(() => {}); return; }
   try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = muted ? 0 : .55; master.connect(ac.destination);
@@ -855,7 +855,7 @@ $('#againBtn').addEventListener('click', start);
 const ICON_ON = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
 function muteIcon() { $('#mute').innerHTML = muted ? ICON_OFF : ICON_ON; $('#mute').classList.toggle('off', muted); }
-$('#mute').addEventListener('click', () => { muted = !muted; store.set('smashball-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; });
+$('#mute').addEventListener('click', () => { muted = !muted; window.BounceLabSound && BounceLabSound.setMuted(muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; });
 muteIcon();
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
 document.addEventListener('visibilitychange', () => { if (document.hidden) { joyEnd(); pauseGame(); } });
@@ -1039,7 +1039,7 @@ const setVal = k => k === 'sound' ? (muted ? 0 : 1) : SET[k];
 function syncSet() { document.querySelectorAll('#setList .seg').forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +setVal(g.dataset.k)))); }
 document.querySelectorAll('#setList .seg button').forEach(b => b.addEventListener('click', () => {
   const k = b.parentNode.dataset.k, v = +b.dataset.v;
-  if (k === 'sound') { muted = !v; store.set('smashball-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; }
+  if (k === 'sound') { muted = !v; window.BounceLabSound && BounceLabSound.setMuted(muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; }
   else { SET[k] = v; store.set('smashball-settings', SET); applySettings(); if (k === 'glow') bloom.enabled = !!v; if (k === 'vibe') buzz(12); }
   syncSet();
 }));

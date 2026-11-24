@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [Bounce Lab 1.13: sound works on iPhone, one sound setting] - 2026-11-24
+- Fix: no sound on iPhone in any game. Two causes: Safari silenced the games when the phone's ring/silent switch was on silent, and the games tried to start their sound on finger-down, which iPhone doesn't allow (sound may only start when a tap finishes), so the sound stayed stuck off. The lab now asks iPhone for "playback" audio (plays even on silent, like a video) and wakes the sound up on every tap. Games that pause their sound on purpose stay quiet until you resume
+- One sound setting for the whole lab: muting or unmuting in any game (or the lobby) applies everywhere and is remembered (localStorage bouncelab-muted; the old per-game settings carry over)
+- Every game keeps a Sound switch in its Settings plus its quick sound button
+- When sound is off the lab switches iPhone back to "ambient" audio, so it won't interrupt music you're playing
+- lab.js?v=1.13, store.js?v=1.13
+
 ## [Bounce Lab 1.12: one name, scores post themselves, top 50] - 2026-11-24
 - One name for every game: the first time you finish a run with a score (in any game), the lab asks for your name once. After that every game uses it, so a name entered in Ascent also posts your Summit, Bouncer and Smashball scores
 - Scores post themselves: a run is posted when it's your best in that game on this device, or when it's good enough for the top 50. No more tapping Post

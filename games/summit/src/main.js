@@ -1235,9 +1235,9 @@ function stepPops(dt) {
 }
 
 // ---------------------------------------------------------------- sound
-let ac = null, master = null, noiseBuf = null, muted = store.get('summit-muted', false), chargeOsc = null, chargeGain = null, engineOsc = null, engineGain = null;
+let ac = null, master = null, noiseBuf = null, muted = !!(window.BounceLabSound && BounceLabSound.muted), chargeOsc = null, chargeGain = null, engineOsc = null, engineGain = null;
 function audio() {
-  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  if (ac) { if (ac.state !== 'running') ac.resume().catch(() => {}); return; }
   try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = muted ? 0 : .55; master.connect(ac.destination);
@@ -1587,7 +1587,7 @@ $('#playBtn').addEventListener('click', start);
 $('#againBtn').addEventListener('click', start);
 $('#payBtn').addEventListener('click', () => payCharon(true));
 $('#letBtn').addEventListener('click', () => payCharon(false));
-$('#mute').addEventListener('click', () => { muted = !muted; store.set('summit-muted', muted); $('#mute').textContent = muted ? '🔇' : '🔊'; if (master) master.gain.value = muted ? 0 : .55; });
+$('#mute').addEventListener('click', () => { muted = !muted; window.BounceLabSound && BounceLabSound.setMuted(muted); $('#mute').textContent = muted ? '🔇' : '🔊'; if (master) master.gain.value = muted ? 0 : .55; });
 $('#mute').textContent = muted ? '🔇' : '🔊';
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (P.charging) { P.charging = false; P.charge = 0; } pauseGame(); } });

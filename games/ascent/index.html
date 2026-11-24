@@ -88,7 +88,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <!-- share-preview:end -->
-<script src="../../lab/lab.js?v=1.12" data-game="ascent" data-version="v6" data-menus="own"></script>
+<script src="../../lab/lab.js?v=1.13" data-game="ascent" data-version="v6" data-menus="own"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -243,7 +243,7 @@ function physics(){
 }
 const HUES=[188,312,150,40,265,205];
 try{best=+localStorage.getItem('bouncer-ascent-best')||0}catch(e){}
-let muted=false;try{muted=localStorage.getItem('bouncer-ascent-muted')==='1'}catch(e){}
+let muted=!!(window.BounceLabSound&&BounceLabSound.muted);   // one sound setting for the whole lab
 
 const POW={
   multi:{c:'#ffd23f',g:'×3',n:'MULTI-ORB',w:3},
@@ -296,7 +296,7 @@ resize();pad.x=W/2;pad.y=H*.86;
 /* ================= AUDIO ================= */
 let AC=null,master=null,noiseBuf=null;
 function initAudio(){
-  if(AC){if(AC.state==='suspended')AC.resume();return}
+  if(AC){if(AC.state!=='running')AC.resume().catch(()=>{});return}
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
     const comp=AC.createDynamicsCompressor();master=AC.createGain();master.gain.value=muted?0:.55;master.connect(comp);comp.connect(AC.destination);
@@ -1043,7 +1043,7 @@ $('#playBtn').onclick=start;$('#againBtn').onclick=start;$('#resumeBtn').onclick
 $('#pauseBtn').onclick=()=>{state==='play'?pause():resume()};
 const muteBtn=$('#muteBtn');
 function syncMute(){muteBtn.classList.toggle('off',muted);if(master)master.gain.value=muted?0:.55}
-muteBtn.onclick=()=>{initAudio();muted=!muted;try{localStorage.setItem('bouncer-ascent-muted',muted?'1':'0')}catch(e){}syncMute()};
+muteBtn.onclick=()=>{initAudio();muted=!muted;window.BounceLabSound&&BounceLabSound.setMuted(muted);syncMute()};
 syncMute();
 const fsBtn=$('#fsBtn');
 if(document.documentElement.requestFullscreen&&document.fullscreenEnabled!==false){fsBtn.style.display='';fsBtn.onclick=()=>{try{(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()).catch(()=>{fsBtn.style.display='none'})}catch(e){fsBtn.style.display='none'}}}
@@ -1065,7 +1065,7 @@ $('#restartBtn').onclick=start;
 $('#fbBtnPause').onclick=()=>{window.BounceLab&&BounceLab.openFeedback&&BounceLab.openFeedback()};
 $('#howDone').onclick=$('#lbDone').onclick=()=>showOv(setReturn);
 const soundSeg=$('#soundSeg');function syncSoundSeg(){for(const bt of soundSeg.children)bt.classList.toggle('on',(bt.dataset.v==='1')!==muted)}
-for(const bt of soundSeg.children)bt.onclick=()=>{initAudio();muted=bt.dataset.v!=='1';try{localStorage.setItem('bouncer-ascent-muted',muted?'1':'0')}catch(e){}syncMute();syncSoundSeg()};
+for(const bt of soundSeg.children)bt.onclick=()=>{initAudio();muted=bt.dataset.v!=='1';window.BounceLabSound&&BounceLabSound.setMuted(muted);syncMute();syncSoundSeg()};
 $('#gearBtn').onclick=openSettings;$('#setBtnTitle').onclick=openSettings;$('#setBtnPause').onclick=openSettings;
 $('#setDone').onclick=()=>{saveSettings();showOv(setReturn)};
 $('#setReset').onclick=()=>{Object.assign(S,DEF);syncSettings();saveSettings()};

@@ -241,9 +241,9 @@ details.old p{margin:10px 0 8px}
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="wipe"></div>
 
-<script src="lab/config.js?v=1.10"></script>
-<script src="lab/store.js?v=1.10"></script>
-<script src="games.js?v=1.10"></script>
+<script src="lab/config.js?v=1.13"></script>
+<script src="lab/store.js?v=1.13"></script>
+<script src="games.js?v=1.13"></script>
 <script>
 (() => {
 'use strict';
@@ -416,7 +416,7 @@ function spawnCourse() {
 function obsRect(o) { const w = o.w * R, h = o.hR * R; return { l: o.x, r: o.x + w, t: GY - h, b: GY, w, h }; }
 
 // ---------- audio (quiet; only things you cause make noise) ----------
-let AC = null, master = null, muted = !!S.ls.get('bouncelab-lobby-muted', false);
+let AC = null, master = null, muted = !!(window.BounceLabSound && BounceLabSound.muted);   // one sound setting for the whole lab
 function syncSound() { $('#sw').style.display = muted ? 'none' : ''; $('#bSound').classList.toggle('off', muted); }
 syncSound();
 function initAudio() {
@@ -1391,7 +1391,7 @@ $('#lItems').addEventListener('click', e => {
   if (e.target.closest('.go')) launch(b.game, 'games/' + encodeURIComponent(b.game.id) + '/index.html', null); else openCard(b);
 });
 $('#lItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('gc')) e.target.click(); });
-$('#bSound').addEventListener('click', () => { muted = !muted; S.ls.set('bouncelab-lobby-muted', muted); if (!muted) { initAudio(); if (AC && AC.state === 'suspended') AC.resume(); tone(660, 0.06, 0.15, 'sine', 0, 1); } syncSound(); });
+$('#bSound').addEventListener('click', () => { muted = !muted; window.BounceLabSound && BounceLabSound.setMuted(muted); if (!muted) { initAudio(); if (AC && AC.state === 'suspended') AC.resume(); tone(660, 0.06, 0.15, 'sine', 0, 1); } syncSound(); });
 
 // ---------- install as an app ----------
 // Android/desktop Chrome offer an install prompt; we show an install button only when it's available.

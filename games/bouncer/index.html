@@ -104,7 +104,7 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <!-- share-preview:end -->
-<script src="../../lab/lab.js?v=1.12" data-game="bouncer" data-version="v6" data-menus="own"></script>
+<script src="../../lab/lab.js?v=1.13" data-game="bouncer" data-version="v6" data-menus="own"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -308,9 +308,10 @@ paddle.h = paddle.th = ZMAX * 0.35; ball.h = paddle.h + GAPH * 0.4;
 // player settings (saved on this device)
 const SET_DEF = { sound: 1, vibe: 1, sens: 1, shake: 1 };
 const SET = Object.assign({}, SET_DEF); try { Object.assign(SET, JSON.parse(localStorage.getItem('bouncer-v6-settings') || '{}')); } catch (e) {}
+if (window.BounceLabSound) SET.sound = BounceLabSound.muted ? 0 : 1;   // one sound setting for the whole lab
 let AC = null, master, revIn, noiseBuf, windGain, windFilter, muted = !SET.sound;
 function initAudio() {
-  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  if (AC) { if (AC.state !== 'running') AC.resume().catch(() => {}); return; }
   try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
   master = AC.createGain(); master.gain.value = muted ? 0 : 0.9;
   const comp = AC.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
@@ -704,7 +705,7 @@ $('mute').addEventListener('click', e => {
   SET.sound = muted ? 0 : 1; saveSet(); applySound();
 });
 function applySound() {
-  muted = !SET.sound; $('mute').textContent = muted ? 'sound off' : 'sound on';
+  muted = !SET.sound; window.BounceLabSound && BounceLabSound.setMuted(muted); $('mute').textContent = muted ? 'sound off' : 'sound on';
   if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, AC.currentTime, 0.05); else if (!muted) initAudio();
 }
 $('mute').textContent = muted ? 'sound off' : 'sound on';

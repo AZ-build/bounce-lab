@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [Bounce Lab 1.12: one name, scores post themselves, top 50] - 2026-11-24
+- One name for every game: the first time you finish a run with a score (in any game), the lab asks for your name once. After that every game uses it, so a name entered in Ascent also posts your Summit, Bouncer and Smashball scores
+- Scores post themselves: a run is posted when it's your best in that game on this device, or when it's good enough for the top 50. No more tapping Post
+- "Not now" is respected: you won't be asked again. You can still set or change your name any time from a game's Leaderboard screen ("Playing as ... change")
+- Leaderboards show the top 50 scores (in-game screens and the Scores sheet after a run)
+- lab.js?v=1.12
+
 ## [Bounce Lab 1.11: every game has its own menus] - 2026-11-24
 - Every game now has its own main menu and pause menu, each in that game's style:
   - Main menu: Play, How to play, Leaderboard, Settings, Back to the lab

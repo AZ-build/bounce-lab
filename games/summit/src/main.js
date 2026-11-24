@@ -1616,7 +1616,7 @@ function showSec(id) {
 function openSub(id) {
   panelBack = paused ? 'pause' : null; showSec(id);
   if (id === 'set') syncSet();
-  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 10, unit: ' m' }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
+  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 50, unit: ' m' }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
 }
 function haltInput() { P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); $('#power').classList.remove('on'); if (chargeGain) chargeGain.gain.value = 0; }
 function pauseGame() { if (!RUNNING() || paused || booting) return; paused = true; haltInput(); if (ac) ac.suspend().catch(() => {}); showSec('pause'); }

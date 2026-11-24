@@ -12,7 +12,7 @@
 <title>Template · Bounce Lab</title>
 <!-- ▼ THE ONE LINE that connects a game to the lab. Change data-game to this folder's name.
      data-menus="own" = this game has its own menus (it must: see below), so the lab hides its corner chips. -->
-<script src="../../lab/lab.js?v=1.11" data-game="_template" data-version="v1" data-menus="own"></script>
+<script src="../../lab/lab.js?v=1.12" data-game="_template" data-version="v1" data-menus="own"></script>
 <style>
   html,body{margin:0;height:100%;background:#05070f;overflow:hidden;color:#e8f6ff;font:600 16px system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
   canvas{display:block;width:100%;height:100%}
@@ -61,7 +61,7 @@ let W, H, ball, score = 0, state = 'title', paused = false, muted = false, back 
 function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
 addEventListener('resize', resize); resize();
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
-function openSub(id) { back = paused ? 'pause' : state === 'over' ? 'over' : 'title'; show(id); if (id === 'lb') window.BounceLab && BounceLab.leaderboard($('lbList'), { n: 10 }); }
+function openSub(id) { back = paused ? 'pause' : state === 'over' ? 'over' : 'title'; show(id); if (id === 'lb') window.BounceLab && BounceLab.leaderboard($('lbList'), { n: 50 }); }
 function start() {
   ball = { x: W / 2, y: H * 0.4, vx: 0, vy: -600, r: Math.min(W, H) * 0.07 };
   score = 0; state = 'play'; paused = false; show(null); document.body.classList.add('playing');

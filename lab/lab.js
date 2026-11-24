@@ -12,7 +12,7 @@
      Games with their own pause/menu screens can drop the lab's suggest / back-to-lab block into them:
        BounceLab.menuLinks(element)
    Game menus (every game should have its own main menu + pause menu with How to play, Leaderboard, Settings, Back to lab):
-     BounceLab.leaderboard(element, { n: 10, unit: ' m' })  // fills element with this game's top scores, styled by the game
+     BounceLab.leaderboard(element, { n: 50, unit: ' m' })  // fills element with this game's top scores (up to 50), styled by the game
      BounceLab.exit()                                       // back to the lab
      BounceLab.openFeedback()                               // the lab's rate & feedback sheet
 */
@@ -26,7 +26,9 @@
   const GAME = (me.dataset.game || location.pathname.split('/').filter(Boolean).slice(-2, -1)[0] || 'game').toLowerCase();
   const VERSION = me.dataset.version || '';
   const NO_BOARD = me.dataset.leaderboard === 'off';
-  const OWN_MENUS = me.dataset.menus === 'own';         // the game has its own main/pause menus with a back-to-lab button, so the lab hides its corner chips
+  const OWN_MENUS = me.dataset.menus === 'own';
+  const BOARD_N = 50;                                    // leaderboards show the top 50 scores
+  const NAME = 'bouncelab-name', ASKED = 'bouncelab-name-asked';   // one name for every game on the site         // the game has its own main/pause menus with a back-to-lab button, so the lab hides its corner chips
   // challenge links look like games/ascent/?vs=1234&by=Adrian
   const CHALLENGE = (() => { try { const q = new URLSearchParams(location.search), vs = parseInt(q.get('vs'), 10); if (!(vs > 0)) return null; return { vs, by: (q.get('by') || 'A friend').replace(/[<>]/g, '').slice(0, 16) }; } catch (e) { return null; } })();
 
@@ -92,7 +94,7 @@
   function shareScore() {
     const g = info();
     if (state.score == null || state.score <= 0) return shareGame();
-    const name = S.ls.get('bouncelab-name', '');
+    const name = S.ls.get(NAME, '');
     const url = gameUrl() + '?vs=' + state.score + (name ? '&by=' + encodeURIComponent(name.slice(0, 16)) : '');
     doShare({ title: g.title + ' challenge', text: 'I scored ' + fmt(state.score) + ' in ' + g.title + '. Think you can beat it?', url }, 'share-score');
   }
@@ -146,6 +148,12 @@
           <div class="bl-mode">${S.online ? '' : 'Demo mode &middot; saved on this device only'}${VERSION ? (S.online ? '' : ' &middot; ') + GAME + ' ' + esc(VERSION) : ''}</div>
         </div>
       </div>
+      <div id="bl-namebox" role="dialog" aria-label="Your name"><div class="bl-ncard">
+        <div class="bl-nq">Your name for the leaderboards</div>
+        <div class="bl-nsub">Used in every Bounce Lab game. You only do this once, then your best scores post themselves.</div>
+        <input id="bl-nin" maxlength="16" placeholder="Your name" autocomplete="nickname" enterkeyhint="done">
+        <div class="bl-nrow"><button class="bl-btn bl-ghost" id="bl-nlater">Not now</button><button class="bl-btn" id="bl-nsave">Save</button></div>
+      </div></div>
       <div id="bl-toast"></div>`;
     document.body.appendChild(root);
     if (OWN_MENUS) root.classList.add('bl-own-menus');
@@ -155,7 +163,7 @@
 
     // Keep taps and key presses inside the lab UI from reaching the game.
     ['pointerdown', 'pointerup', 'pointermove', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'touchmove', 'click', 'keydown', 'keyup', 'wheel'].forEach(ev =>
-      root.addEventListener(ev, e => { if (e.target.closest('#bl-top,#bl-bar,#bl-sheet,#bl-scrim,#bl-pause,#bl-pausebtn')) e.stopPropagation(); }, { passive: true }));
+      root.addEventListener(ev, e => { if (e.target.closest('#bl-top,#bl-bar,#bl-sheet,#bl-scrim,#bl-pause,#bl-pausebtn,#bl-namebox')) e.stopPropagation(); }, { passive: true }));
 
     $('#bl-chip').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
     $('#bl-sharechip').addEventListener('click', shareGame);
@@ -189,10 +197,37 @@
     $('#bl-more').addEventListener('click', () => { $('.bl-form').style.display = ''; $('.bl-thanks').style.display = 'none'; });
 
     const nm = $('#bl-name');
-    nm.value = S.ls.get('bouncelab-name', '');
+    nm.value = S.ls.get(NAME, '');
     nm.addEventListener('keydown', e => { if (e.key === 'Enter') postScore(); });
     $('#bl-postbtn').addEventListener('click', postScore);
     paintStars(S.ls.get(key('rating'), 0));
+    $('#bl-nsave').addEventListener('click', saveName);
+    $('#bl-nin').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+    $('#bl-nlater').addEventListener('click', () => { S.ls.set(ASKED, 1); closeName(); });
+    API.askName = () => openName(false);
+  }
+
+  // ---------- one name for every game ----------
+  let nameThen = null;   // what to do after the name is saved (post this run's score)
+  function openName(post) { nameThen = post ? 'post' : null; const i = $('#bl-nin'); i.value = S.ls.get(NAME, ''); ui.root.classList.add('bl-naming'); setTimeout(() => i.focus(), 60); }
+  function closeName() { ui.root.classList.remove('bl-naming'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+  function saveName() {
+    const name = $('#bl-nin').value.replace(/[<>]/g, '').trim().slice(0, 16);
+    if (!name) { toast('Type a name first'); return; }
+    S.ls.set(NAME, name); S.ls.set(ASKED, 1); $('#bl-name').value = name;
+    S.track(GAME + '/set-name', 'Set name');
+    closeName(); toast('Hi ' + name + '! Your best scores will post themselves');
+    if (nameThen === 'post') postScore(); else linkBoxesRefresh();
+  }
+  function linkBoxesRefresh() { document.querySelectorAll('.bl-glb[data-bl-n]').forEach(el => fillBoard(el, { n: +el.dataset.blN, unit: el.dataset.blU || '' })); }
+  // post this run when it's your best on this device or it makes the top 50
+  async function autoPost(score, run) {
+    if (score > S.ls.get(key('pb'), 0)) return postScore();
+    try {
+      const rows = await S.topScores(GAME, BOARD_N);
+      if (state.runId !== run || state.posted) return;
+      if (rows.length < BOARD_N || score > rows[rows.length - 1].score) postScore();
+    } catch (e) {}
   }
 
   // ---------- pause menu ----------
@@ -219,18 +254,24 @@
   }
   // top scores, rendered into a game's own menu (the game styles it: .bl-glb, li.me, .r .n .s, .bl-glb-msg)
   async function fillBoard(el, o) {
-    el.classList.add('bl-glb');
+    el.classList.add('bl-glb'); el.dataset.blN = o.n || BOARD_N; el.dataset.blU = o.unit || '';
     el.innerHTML = '<div class="bl-glb-msg">Loading scores...</div>';
     S.track(GAME + '/menu-leaderboard', 'Opened menu leaderboard');
     let rows;
-    try { rows = await S.topScores(GAME, o.n || 10); } catch (e) { el.innerHTML = '<div class="bl-glb-msg">The leaderboard is offline right now.</div>'; return; }
-    if (!rows.length) { el.innerHTML = '<div class="bl-glb-msg">No scores yet. Finish a run and post yours to be first.</div>'; return; }
-    const me = (S.ls.get('bouncelab-name', '') || '').toLowerCase(), unit = esc(o.unit || '');
-    let marked = false;
-    el.innerHTML = '<ol>' + rows.map((r, i) => {
+    try { rows = await S.topScores(GAME, Math.min(BOARD_N, o.n || BOARD_N)); } catch (e) { el.innerHTML = '<div class="bl-glb-msg">The leaderboard is offline right now.</div>'; return; }
+    const meName = S.ls.get(NAME, ''), me = (meName || '').toLowerCase(), unit = esc(o.unit || '');
+    const who = meName ? `<div class="bl-glb-who">Playing as <b>${esc(meName)}</b> <button class="bl-glb-chg">change</button></div>`
+      : `<div class="bl-glb-who">Your best scores post themselves once you <button class="bl-glb-chg">set your name</button></div>`;
+    let marked = false, list = '';
+    if (rows.length) list = '<ol>' + rows.map((r, i) => {
       const mine = !marked && me && (r.name || '').toLowerCase() === me; if (mine) marked = true;
       return `<li class="${mine ? 'me' : ''}"><span class="r">${i + 1}</span><span class="n">${esc(r.name || 'anon')}</span><span class="s">${fmt(r.score)}${unit}</span></li>`;
-    }).join('') + '</ol>' + (me ? '' : '<div class="bl-glb-msg">Post a score at the end of a run to get on the board.</div>');
+    }).join('') + '</ol>';
+    else list = '<div class="bl-glb-msg">No scores yet. Finish a run to be the first.</div>';
+    el.innerHTML = who + list;
+    const chg = el.querySelector('.bl-glb-chg');
+    chg.addEventListener('click', e => { e.stopPropagation(); openName(false); });
+    ['pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(ev => chg.addEventListener(ev, e => e.stopPropagation()));
   }
   function paintStars(n) { document.querySelectorAll('#bl-root .bl-star, .bl-links .bl-star').forEach(s => s.classList.toggle('on', +s.dataset.s <= n)); }
   function showTab(t) {
@@ -244,7 +285,7 @@
   // ---------- run lifecycle ----------
   function onStart() {
     state.playing = true; state.startT = performance.now(); state.score = null; state.posted = false; state.runId++; setPaused(false);
-    ui.root.classList.add('bl-playing'); ui.root.classList.remove('bl-over'); closeSheet();
+    ui.root.classList.add('bl-playing'); ui.root.classList.remove('bl-over', 'bl-naming'); closeSheet();
     S.track(GAME + '/start', 'Run started');
   }
   function onOver(score, stats) {
@@ -259,9 +300,11 @@
     if (!NO_BOARD) $('.bl-board span').innerHTML = '&#127942; Post';
     setTimeout(() => { if (state.runId === run && !state.playing) { ui.root.classList.remove('bl-playing'); ui.root.classList.add('bl-over'); } }, 1300);
     // Auto-post when the player already has a name and this beats their best on this device.
-    const name = S.ls.get('bouncelab-name', '');
-    const pb = S.ls.get(key('pb'), 0);
-    if (!NO_BOARD && name && score > 0 && score > pb) postScore();
+    // One name for every game: ask once (the first time you finish a run with a score), then post by yourself
+    if (!NO_BOARD && score > 0) {
+      if (S.ls.get(NAME, '')) autoPost(score, run);
+      else if (!S.ls.get(ASKED, 0)) setTimeout(() => { if (state.runId === run && !state.playing && !state.posted) openName(true); }, 1500);
+    }
     if (CHALLENGE && score > 0) setTimeout(() => {
       if (state.runId !== run) return;
       if (score > CHALLENGE.vs) { toast('\uD83C\uDF89 You beat ' + CHALLENGE.by + "'s " + fmt(CHALLENGE.vs) + '! Share it back', 5000); S.track(GAME + '/challenge-won', 'Beat a challenge'); }
@@ -271,10 +314,10 @@
 
   async function postScore() {
     if (state.score == null || state.posted) return;
-    const name = $('#bl-name').value.replace(/[<>]/g, '').trim().slice(0, 16);
+    const name = ($('#bl-name').value || S.ls.get(NAME, '')).replace(/[<>]/g, '').trim().slice(0, 16);
     if (!name) { openSheet('lb'); $('#bl-name').focus(); toast('Add a name to post'); return; }
     if (state.score <= 0) { toast('Score some points first'); return; }
-    S.ls.set('bouncelab-name', name);
+    S.ls.set(NAME, name);
     state.posted = true;
     const btn = $('#bl-postbtn'); btn.disabled = true; btn.textContent = '...';
     try {
@@ -300,8 +343,8 @@
     if (!state.posted) { const b = $('#bl-postbtn'); b.disabled = false; b.textContent = 'Post score'; }
     msg.textContent = 'Loading...';
     try {
-      const rows = await S.topScores(GAME, 10);
-      const myName = (S.ls.get('bouncelab-name', '') || '').toLowerCase();
+      const rows = await S.topScores(GAME, BOARD_N);
+      const myName = (S.ls.get(NAME, '') || '').toLowerCase();
       let marked = false;   // the same name can show up several times: light up this run's score once, else your best
       const isMe = r => { if (marked || !r.name || r.name.toLowerCase() !== myName) return false; if (state.posted && r.score !== state.score) return false; return (marked = true); };
       list.innerHTML = rows.map((r, i) => `<li class="${isMe(r) ? 'me' : ''}"><span class="bl-pos">${i + 1}</span><span class="bl-nm">${esc(r.name || 'anon')}</span><span class="bl-sc">${fmt(r.score)}</span></li>`).join('');
@@ -326,7 +369,7 @@
     if (!text && !tags.length && !stars) { toast('Pick some stars or write a note'); return; }
     const btn = $('#bl-send'); btn.disabled = true; btn.textContent = '...';
     try {
-      await S.sendFeedback(GAME, { stars, text: (tags.length ? '[' + tags.join(', ') + '] ' : '') + text, name: S.ls.get('bouncelab-name', ''), v: VERSION, score: state.score });
+      await S.sendFeedback(GAME, { stars, text: (tags.length ? '[' + tags.join(', ') + '] ' : '') + text, name: S.ls.get(NAME, ''), v: VERSION, score: state.score });
       S.track(GAME + '/feedback', 'Sent feedback');
       $('#bl-text').value = ''; ui.root.querySelectorAll('.bl-tagb.on').forEach(b => b.classList.remove('on'));
       $('.bl-form').style.display = 'none'; $('.bl-thanks').style.display = 'block';

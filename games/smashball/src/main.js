@@ -1052,7 +1052,7 @@ function showSec(id) {
 function openSub(id) {
   panelBack = paused ? 'pause' : null; showSec(id);
   if (id === 'set') syncSet();
-  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 10 }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
+  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 50 }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
 }
 function pauseGame() { if (mode !== 'play' || paused) return; paused = true; joyEnd(); if (ac) ac.suspend().catch(() => {}); showSec('pause'); }
 function resumeGame() { if (!paused) return; paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); showSec(null); }

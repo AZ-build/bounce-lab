@@ -11,6 +11,10 @@
                 button: false (you draw your own pause button and call BounceLab.pause()), keys: false (you handle Esc/P yourself)
      Games with their own pause/menu screens can drop the lab's suggest / back-to-lab block into them:
        BounceLab.menuLinks(element)
+   Game menus (every game should have its own main menu + pause menu with How to play, Leaderboard, Settings, Back to lab):
+     BounceLab.leaderboard(element, { n: 10, unit: ' m' })  // fills element with this game's top scores, styled by the game
+     BounceLab.exit()                                       // back to the lab
+     BounceLab.openFeedback()                               // the lab's rate & feedback sheet
 */
 (function () {
   'use strict';
@@ -22,6 +26,7 @@
   const GAME = (me.dataset.game || location.pathname.split('/').filter(Boolean).slice(-2, -1)[0] || 'game').toLowerCase();
   const VERSION = me.dataset.version || '';
   const NO_BOARD = me.dataset.leaderboard === 'off';
+  const OWN_MENUS = me.dataset.menus === 'own';         // the game has its own main/pause menus with a back-to-lab button, so the lab hides its corner chips
   // challenge links look like games/ascent/?vs=1234&by=Adrian
   const CHALLENGE = (() => { try { const q = new URLSearchParams(location.search), vs = parseInt(q.get('vs'), 10); if (!(vs > 0)) return null; return { vs, by: (q.get('by') || 'A friend').replace(/[<>]/g, '').slice(0, 16) }; } catch (e) { return null; } })();
 
@@ -44,7 +49,8 @@
     hidePauseMenu() { if (ui) ui.root.classList.add('bl-pause-hidden'); },
     showPauseMenu() { if (ui) ui.root.classList.remove('bl-pause-hidden'); },
     menuLinks(el) { if (!el) return; if (!ui) { linkBoxes.push(el); return; } fillLinks(el); },
-    exit() { location.href = new URL('index.html', ROOT_URL).href; },
+    exit() { S && S.track(GAME + '/back-to-lab', 'Back to lab'); location.href = new URL('index.html', ROOT_URL).href; },
+    leaderboard(el, opts) { if (!el) return; if (!API._ready) return queue.push(['leaderboard', arguments]); return fillBoard(el, opts || {}); },
     openFeedback() { if (ui) openSheet('fb'); }
   };
   window.BounceLab = API;
@@ -142,6 +148,7 @@
       </div>
       <div id="bl-toast"></div>`;
     document.body.appendChild(root);
+    if (OWN_MENUS) root.classList.add('bl-own-menus');
     if (!document.querySelector('link[data-bl-font]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.blFont = '1'; f.href = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap'; document.head.appendChild(f); }
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register(new URL('sw.js', ROOT_URL).href).catch(() => {});
     ui = { root };
@@ -209,6 +216,21 @@
     el.querySelector('.bl-suggest').addEventListener('click', e => { e.stopPropagation(); openSheet('fb'); });
     el.querySelector('.bl-back').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
     ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
+  }
+  // top scores, rendered into a game's own menu (the game styles it: .bl-glb, li.me, .r .n .s, .bl-glb-msg)
+  async function fillBoard(el, o) {
+    el.classList.add('bl-glb');
+    el.innerHTML = '<div class="bl-glb-msg">Loading scores...</div>';
+    S.track(GAME + '/menu-leaderboard', 'Opened menu leaderboard');
+    let rows;
+    try { rows = await S.topScores(GAME, o.n || 10); } catch (e) { el.innerHTML = '<div class="bl-glb-msg">The leaderboard is offline right now.</div>'; return; }
+    if (!rows.length) { el.innerHTML = '<div class="bl-glb-msg">No scores yet. Finish a run and post yours to be first.</div>'; return; }
+    const me = (S.ls.get('bouncelab-name', '') || '').toLowerCase(), unit = esc(o.unit || '');
+    let marked = false;
+    el.innerHTML = '<ol>' + rows.map((r, i) => {
+      const mine = !marked && me && (r.name || '').toLowerCase() === me; if (mine) marked = true;
+      return `<li class="${mine ? 'me' : ''}"><span class="r">${i + 1}</span><span class="n">${esc(r.name || 'anon')}</span><span class="s">${fmt(r.score)}${unit}</span></li>`;
+    }).join('') + '</ol>' + (me ? '' : '<div class="bl-glb-msg">Post a score at the end of a run to get on the board.</div>');
   }
   function paintStars(n) { document.querySelectorAll('#bl-root .bl-star, .bl-links .bl-star').forEach(s => s.classList.toggle('on', +s.dataset.s <= n)); }
   function showTab(t) {

@@ -9,7 +9,7 @@ let js = out.outputFiles[0].text;
 if (js.includes('</script')) js = js.replace(/<\/script/g, '<\\/script');
 const tpl = fs.readFileSync('template.html', 'utf8');
 const lab = process.argv[2] === 'lab'
-  ? '<script src="../../lab/lab.js?v=1.10" data-game="summit" data-version="v9"></script>'
+  ? '<script src="../../lab/lab.js?v=1.11" data-game="summit" data-version="v9" data-menus="own"></script>'
   : '';
 const html = tpl.replace('<!--LAB-->', lab).replace('/*GAME*/', () => js);
 const dest = process.argv[3] || 'dist/index.html';

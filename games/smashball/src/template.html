@@ -45,10 +45,11 @@
   #clock.gold { color: #fff3d6; text-shadow: 0 0 4px var(--gold), 0 0 10px var(--gold); font-size: 11px; letter-spacing: .14em; }
   #clock.low { color: #ff9a7a; }
   #hudR { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-  #mute { pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #dfe7f2; border: 0; padding: 0;
+  #mute, #pauseB { pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #dfe7f2; border: 0; padding: 0;
     background: radial-gradient(circle at 50% 28%, rgba(255,255,255,.2), rgba(255,255,255,0) 55%), conic-gradient(from 20deg, #2a2e35, #5f656f, #22252b, #4b515a, #2a2e35, #5f656f, #22252b, #4b515a, #2a2e35);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.6), 0 6px 16px rgba(0,0,0,.6); }
-  #mute svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #pauseB { display: none; } body.playing #pauseB { display: grid; }
+  #mute svg, #pauseB svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   #mute.off { color: var(--mute); }
 
   #banner { position: fixed; left: 50%; top: 24%; transform: translate(-50%, -10px); text-align: center; pointer-events: none; opacity: 0; width: 92vw; }
@@ -77,8 +78,8 @@
   #hint b { color: var(--gold); }
   #hint.on { opacity: .9; }
 
-  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    padding: 0 24px calc(env(safe-area-inset-bottom) + 84px); text-align: center;
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+    padding: calc(env(safe-area-inset-top) + 60px) 24px calc(env(safe-area-inset-bottom) + 84px); text-align: center;
     background: linear-gradient(to top, rgba(2,3,8,.95) 0%, rgba(2,3,8,.62) 45%, rgba(2,3,8,0) 72%); }
   .logo { --n: #ff9a3c; font: 400 clamp(52px, 15vw, 76px)/1 var(--sign); animation: power 1.4s steps(1) both .2s; }
   @keyframes power { 0% { opacity: .08 } 8% { opacity: .9 } 10% { opacity: .15 } 18% { opacity: 1 } 21% { opacity: .4 } 26%, 100% { opacity: 1 } }
@@ -91,6 +92,39 @@
     box-shadow: 0 0 6px var(--you), 0 0 20px rgba(62,246,255,.5), 0 8px 24px rgba(0,0,0,.7), inset 0 0 0 1.5px #b9fbff, inset 0 0 14px rgba(62,246,255,.5); text-shadow: 0 0 1px #fff, 0 0 10px var(--you); }
   @media (prefers-reduced-motion: reduce) { .logo { animation: none; } }
   .btn:active { transform: scale(.97); }
+  .screen > :first-child { margin-top: auto; }
+  /* menus (Smashball's own): steel pills under the neon button */
+  .menu { display: flex; flex-direction: column; align-items: center; gap: 9px; margin-top: 14px; }
+  .mbtn { pointer-events: auto; min-width: 232px; height: 44px; padding: 0 22px; border-radius: 999px; border: 0; cursor: pointer;
+    font: 700 13px var(--f); letter-spacing: .16em; text-transform: uppercase; color: #dfe7f2;
+    background: radial-gradient(circle at 50% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 60%), linear-gradient(180deg, #2c3037, #14161a);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.24), inset 0 -1px 0 rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.7), 0 6px 14px rgba(0,0,0,.55); }
+  .mbtn:active { transform: scale(.97); }
+  .mbtn.lab { background: none; box-shadow: none; color: var(--soft); }
+  .lnk { pointer-events: auto; background: none; border: 0; color: var(--mute); font: 600 13px var(--f); text-decoration: underline; text-underline-offset: 3px; padding: 6px; cursor: pointer; }
+  .layer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; z-index: 5;
+    padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 20px); background: rgba(2,3,8,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .card { margin: auto; width: min(370px, 100%); padding: 24px 18px 20px; border-radius: 26px; text-align: center;
+    background: linear-gradient(180deg, rgba(24,26,31,.92), rgba(6,7,9,.96)); box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 0 1px rgba(0,0,0,.6), 0 24px 60px rgba(0,0,0,.6); }
+  .card h2 { margin: 0 0 16px; font: 400 40px/1 var(--sign); }
+  .card .menu { margin-top: 0; }
+  .card .btn { min-width: 232px; }
+  .sec { display: none; } .sec.on { display: block; }
+  .howl { list-style: none; margin: 0 0 18px; padding: 0; text-align: left; font-size: 15px; line-height: 1.45; color: var(--soft); }
+  .howl li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 9px 2px; border-top: 1px solid rgba(255,255,255,.06); }
+  .howl li:first-child { border-top: 0; }
+  .howl i { font-style: normal; text-align: center; color: var(--you); }
+  .howl b { color: var(--text); }
+  .note { font-size: 13px; color: var(--mute); margin: -6px 0 12px; }
+  #lbList { margin-bottom: 18px; font: 600 15px var(--f); border-radius: 16px; padding: 4px; background: rgba(0,0,0,.35); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); --bl-glb-hi: var(--you); }
+  #lbList .s { color: #fff3d6; text-shadow: 0 0 6px rgba(255,194,58,.6); }
+  #setList { margin-bottom: 18px; }
+  .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 2px; border-top: 1px solid rgba(255,255,255,.06); text-align: left; }
+  .opt:first-child { border-top: 0; }
+  .opt span { font: 700 11px var(--f); letter-spacing: .2em; text-transform: uppercase; color: var(--soft); }
+  .seg { display: flex; padding: 3px; gap: 3px; border-radius: 12px; background: rgba(0,0,0,.45); }
+  .seg button { border: 0; background: none; color: var(--mute); font: 700 11px var(--f); letter-spacing: .08em; text-transform: uppercase; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+  .seg button.on { background: #1d2026; color: #fff; box-shadow: inset 0 -2px 0 var(--you), 0 6px 14px -8px var(--you); }
   .small { margin-top: 14px; font: 600 12px var(--f); color: var(--mute); letter-spacing: .1em; min-height: 14px; }
   .stats { display: grid; grid-template-columns: repeat(2, auto); gap: 6px 26px; margin: 14px 0 22px; font-size: 14px; text-align: left; }
   .stats span { color: var(--mute); }
@@ -129,7 +163,7 @@
     <div id="clock">2:00</div>
     <div class="side" id="sBot"><small>BOT</small><b id="gBot" class="neon">0</b></div>
   </div></div>
-  <div id="hudR"><button id="mute" class="ui" aria-label="Sound"></button></div>
+  <div id="hudR"><button id="pauseB" class="ui" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button><button id="mute" class="ui" aria-label="Sound"></button></div>
 </div>
 <div id="banner"><div id="bTitle" class="neon"></div><div id="bSub"></div></div>
 <div id="joy"><div id="knob"></div></div>
@@ -140,11 +174,15 @@
   <div class="logo neon" id="logo">Smashball</div>
   <div class="tag">1v1 · lab arena</div>
   <div class="how">
-    <div><b>Drag</b> anywhere to run. Up is always toward the ball.</div>
-    <div><b>Tap</b> to jump and smash it hard.</div>
-    <div>Score on the <i>bot</i>. Guard your goal. 2 minutes.</div>
+    <div><b>Drag</b> to run · <b>tap</b> to smash · score on the <i>bot</i></div>
   </div>
   <button id="playBtn" class="btn">KICK OFF</button>
+  <div class="menu">
+    <button class="mbtn" data-open="how">How to play</button>
+    <button class="mbtn" data-open="lb">Leaderboard</button>
+    <button class="mbtn" data-open="set">Settings</button>
+    <button class="mbtn lab" data-lab>&#9664;&nbsp; Back to the lab</button>
+  </div>
   <div id="bestT" class="small"></div>
 </div>
 
@@ -161,6 +199,50 @@
     <span>Hardest shot</span><b id="oFast">0 km/h</b>
   </div>
   <button id="againBtn" class="btn">REMATCH</button>
+  <div class="menu">
+    <button class="mbtn" data-open="lb">Leaderboard</button>
+    <button class="mbtn" id="overMenu">Main menu</button>
+  </div>
+</div>
+
+<div id="layer" class="layer ui hide" role="dialog" aria-label="Menu">
+  <div class="card">
+    <div class="sec" id="s-pause">
+      <h2 class="neon">Paused</h2>
+      <div class="menu">
+        <button class="btn" id="resumeBtn">Resume</button>
+        <button class="mbtn" id="restartBtn">Restart match</button>
+        <button class="mbtn" data-open="how">How to play</button>
+        <button class="mbtn" data-open="lb">Leaderboard</button>
+        <button class="mbtn" data-open="set">Settings</button>
+        <button class="mbtn" id="quitBtn">Main menu</button>
+        <button class="mbtn lab" data-lab>&#9664;&nbsp; Back to the lab</button>
+        <button class="lnk" id="fbBtn">Suggest an improvement</button>
+      </div>
+    </div>
+    <div class="sec" id="s-how">
+      <h2 class="neon">How to play</h2>
+      <ul class="howl">
+        <li><i>&#10021;</i><span><b>Drag</b> anywhere to run. A joystick appears under your thumb, and <b>up is always toward the ball</b></span></li>
+        <li><i style="color:var(--gold)">&#9889;</i><span><b>Tap</b> (or put down a second finger) to jump and dash at the ball. Touch it within half a second for a <b>SMASH</b>: a hard shot aimed at the goal</span></li>
+        <li><i style="color:var(--bot)">&#9673;</i><span>Score in the bot's <b style="color:var(--bot)">magenta</b> goal. Guard your own <b style="color:var(--you)">cyan</b> goal behind you</span></li>
+        <li><i>&#9201;</i><span>2-minute match. Tied at full time? <b>Golden goal</b>: next goal wins</span></li>
+        <li><i style="color:var(--gold)">&#9733;</i><span>Points: goal 100, smash goal 150, save 30, win +250</span></li>
+      </ul>
+      <div class="menu"><button class="btn" data-back>Got it</button></div>
+    </div>
+    <div class="sec" id="s-lb">
+      <h2 class="neon">Leaderboard</h2>
+      <div class="note">Top 10 scores. Post yours from the bar after a match.</div>
+      <div id="lbList"></div>
+      <div class="menu"><button class="btn" data-back>Back</button></div>
+    </div>
+    <div class="sec" id="s-set">
+      <h2 class="neon">Settings</h2>
+      <div id="setList"></div>
+      <div class="menu"><button class="btn" data-back>Done</button></div>
+    </div>
+  </div>
 </div>
 <script>/*GAME*/</script>
 </body>

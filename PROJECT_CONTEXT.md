@@ -65,9 +65,11 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 
 ## Ascent notes (v6)
 - Clutch: `updateClutch()`. Setting `S.clutch2`: 0 off, 1 power-up (default), 2 always. Power-up `POW.clutch` adds to `clutchCharges` (max `TUNE.clutchMax`); clutch only fires when the last free orb is below `zoneTop` (`TUNE.clutchZone`) and predicted to miss the pad, and uses a charge
-- Settings saved as `bouncer-ascent-settings-v4`
+- Settings saved as `bouncer-ascent-settings-v4`. Menus: overlays `.ov` (titleOv, pauseOv, overOv, setOv, howOv, lbOv), `openSub()` remembers `setReturn`
+- Holding the orb: once the climb has started a held orb launches itself after `TUNE.holdFuse` s (ring around it). Held orbs collect nothing; the pad only catches power-ups, never coins
 
 ## Summit notes (v9)
+- Menus (lab 1.11): `#layer` holds the pause menu and sub-screens (`.sec`, card class `.mcard` because `.card` is taken by the perk cards). `pauseGame()` / `resumeGame()` / `toMenu()` / `openSub()` near the input code. Settings `summit-settings` (vibe, steer, glow)
 - Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v9.html (change the version file name in package.json for each new version). Older versions in versions/ are frozen archives
 - Tuning: `CFG` (gravity, boulder size/mass, crawler size, drive speed per stage, charge time, throw power range, reach, cloud height) and `STAGES` at the top of main.js. Advantages are in `PERKS`
 - The road: `H(d)` road height at distance d (d = -z), `xc(d)` winding centre line, `G(d, x)` ground anywhere (banked road, `cliffY` on the left, `dropY` berm + drop on the right, ridge drop-off in Ridge stages). Crevasses from `gapsFor(stage)` (seeded; a landing ledge follows each gap)
@@ -90,6 +92,7 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Best score saved as `summit-best-v3`; mute as `summit-muted`
 
 ## Smashball notes (v4)
+- Menus (lab 1.11): `#layer` holds the pause menu and sub-screens; `pauseGame()` / `toMenu()` / `openSub()` above the game loop. Settings `smashball-settings` (vibe, cam, bot, glow) applied to `CFG` by `applySettings()`. Rebuild with `node build.mjs lab ../index.html` only (the npm script also rewrites the frozen versions/v4.html)
 - Renamed from Rebound in Nov 2026 before it was shared: id, folder, URL (`games/smashball/`) and localStorage keys (`smashball-*`) all moved. `games/rebound/index.html` is just a redirect to the new link
 - Source: `games/smashball/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v4.html. v1–v3 in versions/ are frozen minified archives
 - Tuning: `CFG` at the top of main.js (arena size, goal size, ball gravity/bounce/roll, striker size/speed/jump, smash window/cooldown/speed/aim assist, bot speed/smash chance, camera distance/height/side offset/field of view, match length)
@@ -100,11 +103,13 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Bot brain: `think(o, s)` (also drives your striker when `S.autoplay` is on, for testing)
 - Test hook: `window.__smashball` (S, P, B, ball, CEL, start, tap, update, think, stick, cameraUpdate, scored)
 
-## Lab rules for every game (since lab 1.9)
-- Every game must call `BounceLab.pausable({ pause, resume, restart })` (or have its own pause screen and call `BounceLab.menuLinks(el)` inside it). The lab draws the pause button (use `offset: { top, right }` to dodge the HUD) and the pause menu: Resume, Restart, extras, rate, suggest, back to lab
+## Lab rules for every game (since lab 1.11)
+- Every game has its OWN menus, styled its own way (the game stands on its own): main menu (Play, How to play, Leaderboard, Settings, Back to the lab), its own pause button + pause menu (Resume, Restart, How to play, Leaderboard, Settings, Main menu, Back to the lab, Suggest an improvement), game over (Again, Leaderboard, Main menu). Sub-screens return to whichever menu opened them. Auto-pause on `visibilitychange`, Esc/P toggles pause
+- Lab helpers for those menus: `BounceLab.leaderboard(el, { n, unit })` (top scores into the game's own screen, class `.bl-glb`), `BounceLab.exit()`, `BounceLab.openFeedback()`, `BounceLab.menu()` when back on the main menu. Script tag gets `data-menus="own"` (lab hides its Lab/share chips)
+- `BounceLab.pausable()` (the lab's generic pause menu) still works but no game uses it any more
 - Rating lives only on the game-over bar and the lab card (since lab 1.10). Back-to-lab: the Lab chip on title screens, the pause menu, the game-over bar. Never during play
 - Hidden overlays must never catch taps: `.bl-links` inherits pointer-events from its menu (a hidden Ascent pause screen once swallowed the PLAY tap)
 - Leaderboard = top N scores (`topScores`), not best per player
 - Menus must fit short phones: scrollable overlays with `margin-top: auto` on the first child (not `justify-content: center/flex-end` with overflow), padding for safe areas, the Lab chips (~52px) and the game-over bar (~96px)
-- Bump the `lab.js?v=` cache-buster in every game when lab.js/lab.css change (currently 1.10; also in games/summit/src/build.mjs and games/smashball/src/build.mjs)
+- Bump the `lab.js?v=` cache-buster in every game when lab.js/lab.css change (currently 1.11; also in games/summit/src/build.mjs and games/smashball/src/build.mjs)
 - Heavy games show a loading screen first (Summit: `#boot` + `bootStep()`; the game script is a module so the page paints before it runs)

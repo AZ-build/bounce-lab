@@ -42,8 +42,38 @@
   #zap.on { opacity: 1; transition: none; }
   #charon .cTitle { font-size: 34px; font-weight: 900; letter-spacing: 5px; margin-top: 10px; text-shadow: 0 0 24px var(--gold); }
   .btn.ghost { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.25); box-shadow: none; margin-top: 12px; padding: 13px 36px; font-size: 14px; }
-  #mute { pointer-events: auto; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff; border-radius: 50%;
-    width: 36px; height: 36px; font-size: 15px; display: grid; place-items: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #mute, #pauseB { pointer-events: auto; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff; border-radius: 50%;
+    width: 36px; height: 36px; font-size: 15px; display: grid; place-items: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 0; }
+  #pauseB { display: none; font-size: 12px; font-weight: 900; letter-spacing: 1px; } body.playing #pauseB { display: grid; }
+  /* menus (Summit's own): marble card, ember buttons */
+  .menu { display: flex; flex-direction: column; align-items: center; gap: 9px; margin-top: 14px; }
+  .menu .btn.ghost { margin-top: 0; min-width: 236px; }
+  .btn.ghost.lab { background: none; border-color: transparent; opacity: .75; }
+  .lnk { pointer-events: auto; background: none; border: 0; color: rgba(255,255,255,.55); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 6px; cursor: pointer; }
+  .layer { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+    padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 20px); background: rgba(6,5,10,.72); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+  .mcard { margin: auto; width: min(370px, 100%); padding: 24px 18px 20px; border-radius: 26px; text-align: center;
+    background: linear-gradient(180deg, rgba(40,32,34,.9), rgba(10,10,16,.95)); border: 1px solid rgba(255,220,180,.12); box-shadow: 0 0 40px rgba(255,138,58,.08), 0 24px 60px rgba(0,0,0,.6); }
+  .mcard h2 { margin: 0 0 16px; font-size: 30px; font-weight: 900; letter-spacing: 6px; margin-right: -6px; line-height: 1;
+    background: linear-gradient(180deg, #ffffff 15%, #b9c3cf 55%, #6c7583); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(255,150,70,.4)); }
+  .mcard .menu { margin-top: 0; }
+  .mcard .menu > .btn:not(.ghost) { min-width: 236px; }
+  .sec { display: none; } .sec.on { display: block; }
+  .howl { list-style: none; margin: 0 0 18px; padding: 0; text-align: left; font-size: 15px; line-height: 1.45; color: rgba(255,255,255,.85); }
+  .howl li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 9px 2px; border-top: 1px solid rgba(255,255,255,.07); }
+  .howl li:first-child { border-top: 0; }
+  .howl i { font-style: normal; text-align: center; color: var(--gold); }
+  .howl b { color: var(--accent); }
+  .note { font-size: 13px; opacity: .6; margin: -6px 0 12px; }
+  #lbList { margin-bottom: 18px; font-size: 15px; border-radius: 16px; padding: 4px; background: rgba(0,0,0,.3); --bl-glb-hi: var(--hot); }
+  #lbList .s { color: #ffe2c2; }
+  #setList { margin-bottom: 18px; }
+  .opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 2px; border-top: 1px solid rgba(255,255,255,.07); text-align: left; }
+  .opt:first-child { border-top: 0; }
+  .opt span { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: .8; }
+  .seg { display: flex; padding: 3px; gap: 3px; border-radius: 999px; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.1); }
+  .seg button { border: 0; background: none; color: rgba(255,255,255,.55); font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 8px 11px; border-radius: 999px; cursor: pointer; }
+  .seg button.on { background: linear-gradient(180deg, #ffe2c2, var(--hot)); color: #1a0e04; }
 
   #banner { position: fixed; left: 50%; top: 21%; transform: translate(-50%, -10px); text-align: center; pointer-events: none; opacity: 0; width: 92vw; }
   #banner.show { animation: ban 3.4s ease forwards; }
@@ -169,7 +199,7 @@
 <div id="hud" class="hide">
   <div id="hudL"><div id="score">0</div><div id="alt">0 m</div></div>
   <div id="hudC"><div id="mult">×1</div><div id="prog"><div id="progFill"></div></div><div id="campT">CAMP 1</div></div>
-  <div id="hudR"><div id="obolBox"><i></i><span id="obols">0</span></div><button id="mute" class="ui" aria-label="Sound">🔊</button></div>
+  <div id="hudR"><div id="obolBox"><i></i><span id="obols">0</span></div><button id="pauseB" class="ui" aria-label="Pause">II</button><button id="mute" class="ui" aria-label="Sound">🔊</button></div>
 </div>
 <div id="banner"><div id="bTitle"></div><div id="bSub"></div></div>
 <div id="touch"></div><div id="power"></div><div id="fallCount"></div><div id="zap"></div>
@@ -186,11 +216,14 @@
   <div class="tag">v9 · sisyphus</div>
   <div class="how">
     <div>Get the boulder to the summit. You only get one.</div>
-    <div><b>Hold</b> anywhere to wind up a punch</div>
-    <div><b>Slide</b> your finger to steer · <b>let go</b> to punch</div>
-    <div>Let go as it rolls into you · holding keeps your guard up</div>
   </div>
   <button id="playBtn" class="btn">CLIMB</button>
+  <div class="menu">
+    <button class="btn ghost" data-open="how">HOW TO PLAY</button>
+    <button class="btn ghost" data-open="lb">LEADERBOARD</button>
+    <button class="btn ghost" data-open="set">SETTINGS</button>
+    <button class="btn ghost lab" data-lab>&#9664;&nbsp; BACK TO THE LAB</button>
+  </div>
   <div id="bestT" class="small"></div>
 </div>
 
@@ -216,9 +249,54 @@
     <span>Obols</span><b id="oShards">0</b>
   </div>
   <button id="againBtn" class="btn">PUSH AGAIN</button>
+  <div class="menu">
+    <button class="btn ghost" data-open="lb">LEADERBOARD</button>
+    <button class="btn ghost" id="overMenu">MAIN MENU</button>
+  </div>
   <div id="oQuote"></div>
 </div>
 <div id="fade"></div>
+<div id="layer" class="layer ui hide" role="dialog" aria-label="Menu">
+  <div class="mcard">
+    <div class="sec" id="s-pause">
+      <h2>PAUSED</h2>
+      <div class="menu">
+        <button class="btn" id="resumeBtn">RESUME</button>
+        <button class="btn ghost" id="restartBtn">START OVER</button>
+        <button class="btn ghost" data-open="how">HOW TO PLAY</button>
+        <button class="btn ghost" data-open="lb">LEADERBOARD</button>
+        <button class="btn ghost" data-open="set">SETTINGS</button>
+        <button class="btn ghost" id="quitBtn">MAIN MENU</button>
+        <button class="btn ghost lab" data-lab>&#9664;&nbsp; BACK TO THE LAB</button>
+        <button class="lnk" id="fbBtn">Suggest an improvement</button>
+      </div>
+    </div>
+    <div class="sec" id="s-how">
+      <h2>HOW TO PLAY</h2>
+      <ul class="howl">
+        <li><i>&#9650;</i><span>Get the boulder to the summit. <b>You only get one</b>: lose it and it rolls all the way down</span></li>
+        <li><i>&#9995;</i><span><b>Hold</b> anywhere to wind up a punch. <b>Slide</b> your finger to steer. <b>Let go</b> to punch (a quick tap is a jab)</span></li>
+        <li><i>&#10022;</i><span>Let go just as the boulder rolls into you for a <b>PERFECT</b>. Keep holding and he blocks instead</span></li>
+        <li><i>&#127963;</i><span>Each marble gateway is a <b>camp</b>: pick an advantage. Reach the summit and the gods give you a gift</span></li>
+        <li><i>&#9679;</i><span>Grab <b>obols</b> (bronze 1, silver 3, gold 10). Lose the boulder with enough and <b>Charon</b> rows it back, once per mountain</span></li>
+        <li><i>&#9889;</i><span>Cross crevasses by bridge or ramp. Dodge the clashing rocks, and a pale glow means <b>Zeus</b> strikes there next</span></li>
+        <li><i>&#8593;</i><span>Your score is how high you climbed, in metres</span></li>
+      </ul>
+      <div class="menu"><button class="btn" data-back>GOT IT</button></div>
+    </div>
+    <div class="sec" id="s-lb">
+      <h2>LEADERBOARD</h2>
+      <div class="note">Top 10 climbs. Post yours from the bar after a run.</div>
+      <div id="lbList"></div>
+      <div class="menu"><button class="btn" data-back>BACK</button></div>
+    </div>
+    <div class="sec" id="s-set">
+      <h2>SETTINGS</h2>
+      <div id="setList"></div>
+      <div class="menu"><button class="btn" data-back>DONE</button></div>
+    </div>
+  </div>
+</div>
 <script type="module">/*GAME*/</script>
 </body>
 </html>

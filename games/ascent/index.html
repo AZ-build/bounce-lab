@@ -11,7 +11,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Bouncer · Ascent v5</title>
+<title>Bouncer · Ascent v6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -31,6 +31,13 @@ canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;touch-
 .ov{touch-action:pan-y;justify-content:flex-start;padding:calc(env(safe-area-inset-top) + 52px) 20px calc(env(safe-area-inset-bottom) + 24px)}
 .ov>:first-child{margin-top:auto}.ov>:last-child{margin-bottom:auto}
 #setOv{justify-content:flex-start}
+.ov>.btn.ghost{min-width:230px}
+.btn.ghost.lab{border-color:transparent;color:#7fb9c4}
+.linkbtn{margin-top:10px;background:none;border:0;color:#7fa9b4;font:600 15px Rajdhani,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px}
+.panel .legend{margin-top:6px;max-width:none}.panel .pw{margin:16px auto 0}
+.panel .sub{text-align:center;color:#7fa9b4;font-size:14px;margin:-4px 0 12px}
+#lbList{font:600 17px Rajdhani,system-ui,sans-serif;color:#dffaff;background:rgba(10,22,40,.55);border:1px solid rgba(120,240,255,.14);border-radius:14px;padding:4px;--bl-glb-hi:#3ff3ff}
+#lbList .s{font-family:Orbitron,system-ui,sans-serif;font-size:14px;color:#effeff;text-shadow:0 0 8px rgba(63,243,255,.6)}
 .panel{width:100%;max-width:350px;text-align:left;padding:6px 2px 16px;margin:auto 0}
 .panel h3{font:900 22px Orbitron,system-ui,sans-serif;letter-spacing:.12em;margin:0 0 10px;text-align:center;color:#fff;text-shadow:0 0 10px #3ff3ff}
 .set{padding:8px 12px;border-radius:14px;background:rgba(10,22,40,.55);border:1px solid rgba(120,240,255,.14);margin-bottom:7px}
@@ -81,7 +88,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <!-- share-preview:end -->
-<script src="../../lab/lab.js?v=1.10" data-game="ascent" data-version="v6"></script>
+<script src="../../lab/lab.js?v=1.11" data-game="ascent" data-version="v6" data-menus="own"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -92,7 +99,31 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
   <div class="ov on" id="titleOv">
     <h1>BOUNCER<small>ASCENT</small></h1>
     <p class="tag">Keep the orb climbing.</p>
-    <div class="legend">
+    <button class="btn" id="playBtn">PLAY</button>
+    <button class="btn ghost" id="howBtnTitle">HOW TO PLAY</button>
+    <button class="btn ghost" id="lbBtnTitle">LEADERBOARD</button>
+    <button class="btn ghost" id="setBtnTitle">SETTINGS</button>
+    <button class="btn ghost" id="fsBtn" style="display:none">FULL SCREEN</button>
+    <button class="btn ghost lab" id="labBtnTitle">&#9664; BACK TO THE LAB</button>
+    <div class="best" id="bestTitle"></div>
+  </div>
+
+  <div class="ov" id="pauseOv">
+    <h2>PAUSED</h2>
+    <button class="btn" id="resumeBtn">RESUME</button>
+    <button class="btn ghost" id="restartBtn">RESTART</button>
+    <button class="btn ghost" id="howBtnPause">HOW TO PLAY</button>
+    <button class="btn ghost" id="lbBtnPause">LEADERBOARD</button>
+    <button class="btn ghost" id="setBtnPause">SETTINGS</button>
+    <button class="btn ghost" id="quitBtn">MAIN MENU</button>
+    <button class="btn ghost lab" id="labBtnPause">&#9664; BACK TO THE LAB</button>
+    <button class="linkbtn" id="fbBtnPause">Suggest an improvement</button>
+  </div>
+
+  <div class="ov" id="howOv">
+    <div class="panel">
+      <h3>HOW TO PLAY</h3>
+      <div class="legend">
       <div><i style="color:#3ff3ff">✥</i><span>Drag on the <b>thumb deck</b> at the bottom. Your pad flies just above it</span></div>
       <div><i style="color:#fff">▲</i><span>Lift to launch. <b style="color:#ffd84a">Ram upward</b> to SMASH it higher</span></div>
       <div><i style="color:#3fff9e">◎</i><span>Dead-center hit = <b style="color:#3fff9e">PERFECT</b></span></div>
@@ -104,18 +135,17 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
       <span style="color:#ffd23f">×3 MULTI</span><span style="color:#3fff9e">W WIDE</span><span style="color:#8c9bff">T SLOW-MO</span>
       <span style="color:#ff8a3f">M MAGNET</span><span style="color:#ff3fd8">P PLASMA</span><span style="color:#3ff3ff">S SHIELD</span><span style="color:#ff4f6d">+1 ORB</span><span style="color:#b48cff">C CLUTCH</span>
     </div>
-    <button class="btn" id="playBtn">PLAY</button>
-    <button class="btn ghost" id="setBtnTitle">SETTINGS</button>
-    <button class="btn ghost" id="fsBtn" style="display:none">FULL SCREEN</button>
-    <div class="best" id="bestTitle"></div>
+      <button class="btn" id="howDone">GOT IT</button>
+    </div>
   </div>
 
-  <div class="ov" id="pauseOv">
-    <h2>PAUSED</h2>
-    <button class="btn" id="resumeBtn">RESUME</button>
-    <button class="btn ghost" id="setBtnPause">SETTINGS</button>
-    <button class="btn ghost" id="quitBtn">MAIN MENU</button>
-    <div id="labLinks" style="width:min(300px,86vw)"></div>
+  <div class="ov" id="lbOv">
+    <div class="panel">
+      <h3>LEADERBOARD</h3>
+      <div class="sub">Top 10 scores. Post yours from the bar at the end of a run.</div>
+      <div id="lbList"></div>
+      <button class="btn" id="lbDone">BACK</button>
+    </div>
   </div>
 
   <div class="ov" id="setOv">
@@ -131,6 +161,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
       <div class="set"><label>PAD VS BLOCKS</label><div class="seg" data-k="solid"></div><small>Solid = blocks push your pad around (harder)</small></div>
       <div class="set"><label>CLUTCH SLOW-MO</label><div class="seg" data-k="clutch2"></div><small>Power-up: grab a <b style="color:#b48cff">C</b> to bank one clutch save. Always: every near-miss slows time (easier)</small></div>
       <div class="set"><label>AIM GUIDE</label><div class="seg" data-k="aim"></div><small>Dotted preview of where your next bounce goes</small></div>
+      <div class="set"><label>SOUND</label><div class="seg" id="soundSeg"><button data-v="1">On</button><button data-v="0">Off</button></div></div>
       <div class="set"><label>VIBRATION</label><div class="seg" data-k="vibe"></div></div>
       <button class="btn" id="setDone">DONE</button>
       <button class="btn ghost" id="setReset">RESET TO DEFAULTS</button>
@@ -147,6 +178,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
       <div><b id="oBest">0</b><span>BEST</span></div>
     </div>
     <button class="btn" id="againBtn">AGAIN</button>
+    <button class="btn ghost" id="lbBtnOver">LEADERBOARD</button>
     <button class="btn ghost" id="menuBtn">MAIN MENU</button>
   </div>
 </div>
@@ -181,7 +213,8 @@ const TUNE={
   clutchMax:3,          // most clutch charges you can bank from C power-ups
   startLives:3,
   warmup:300,          // metres over which gravity eases from 80% up to full strength
-  catchGrace:0.5       // extra reach at the pad's ends (× orb radius) so near-misses still count
+  catchGrace:0.5,      // extra reach at the pad's ends (× orb radius) so near-misses still count
+  holdFuse:2.5         // once the climb has started, a held orb launches itself after this many seconds
 };
 
 /* ================= STATE ================= */
@@ -194,7 +227,7 @@ let dragDX=0,dragDY=0,padTarget=null;
 let score=0,alt=0,lives=3,combo=0,comboT=0,mult=1,maxMult=1,best=0,sector=1,hue=188,hueT=188,prevHue=188,nebFade=1;
 let timers={wide:0,slow:0,magnet:0,pierce:0},shield=0;
 let spawnY=0,rowsSincePow=0,respawnT=0,shake=0,flash=0,flashCol='#ffffff',warp=0,metersScored=0;
-let playT=0,clutch=0,clutchX=0,clutchCD=0,wasClutch=false,clutchCharges=0;
+let holdT=0,playT=0,clutch=0,clutchX=0,clutchCD=0,wasClutch=false,clutchCharges=0;
 let wallL=0,wallR=0,ceilF=0,ceilX=0,launched=false,lastCoinSfx=0;
 const keys={};
 /* ---- player settings (saved on this device) ---- */
@@ -364,14 +397,14 @@ const rowGap=()=>H*(meters()<30?.32:rnd(.26,.33));
 function reset(){
   balls=[];obs=[];items=[];parts=[];texts=[];
   score=0;alt=0;lives=TUNE.startLives;combo=0;comboT=0;mult=1;maxMult=1;sector=1;hue=hueT=prevHue=HUES[0];nebFade=1;
-  timers={wide:0,slow:0,magnet:0,pierce:0};shield=0;rowsSincePow=0;respawnT=0;metersScored=0;timeScale=1;started=false;launched=false;warp=0;playT=0;clutch=0;clutchCD=0;clutchCharges=0;
+  timers={wide:0,slow:0,magnet:0,pierce:0};shield=0;rowsSincePow=0;respawnT=0;metersScored=0;timeScale=1;started=false;launched=false;warp=0;playT=0;clutch=0;clutchCD=0;clutchCharges=0;holdT=0;
   pad.w=pad.tw=baseW;pad.x=W/2;pad.y=H*.86;pad.vx=pad.vy=0;pad.dip=pad.dv=0;pad.stun=pad.ghost=pad.inv=0;dragDX=dragDY=0;padTarget=null;
   spawnY=H*.5;ROWS.coins(spawnY);spawnY-=rowGap();
   while(spawnY>-H*.25){spawnRow(spawnY);spawnY-=rowGap()}
   spawnHeld();shield=1;
 }
 function start(){initAudio();reset();state='play';window.BounceLab&&BounceLab.start();showOv(null);$('#btns').classList.add('on')}
-function showOv(id){['titleOv','pauseOv','overOv','setOv'].forEach(o=>$('#'+o).classList.toggle('on',o===id))}
+function showOv(id){['titleOv','pauseOv','overOv','setOv','howOv','lbOv'].forEach(o=>$('#'+o).classList.toggle('on',o===id))}
 function pause(){if(state!=='play')return;state='paused';showOv('pauseOv')}
 function resume(){if(state!=='paused')return;state='play';showOv(null);initAudio()}
 function toMenu(){state='title';window.BounceLab&&BounceLab.menu();$('#btns').classList.remove('on');updateBestTitle();showOv('titleOv')}
@@ -391,7 +424,7 @@ function breakCombo(){combo=0;comboT=0;mult=1}
 function launch(){
   let any=false;
   for(const b of balls)if(b.held){b.held=false;b.vy=-vLaunch;b.vx=clamp(pad.vx*.15,-vLaunch*.35,vLaunch*.35)+rnd(-20,20);any=true;ringFx(b.x,b.y,accent(0),4,40)}
-  if(any){SFX.launch();launched=true;started=true}
+  if(any){SFX.launch();launched=true;started=true;holdT=0}
 }
 function applyPow(p,x,y){
   const P=POW[p];addText(x,y-20,P.n,P.c,16,1.2);SFX.pow();burst(x,y,P.c,26,H*.5,2.5);ringFx(x,y,P.c,6,80,.5,3);score+=50*mult;buzz(20);
@@ -576,6 +609,8 @@ function update(dtR){
   timeScale=lerp(timeScale,tsT,1-Math.exp(-(tsT<timeScale?18:6)*dtR));
   const dt=dtR*timeScale;T+=dt;
   for(const k in timers)if(timers[k]>0)timers[k]=Math.max(0,timers[k]-dtR);
+  // no parking the orb on the pad to farm: once the climb is on, a held orb launches itself
+  if(started&&balls.some(b=>b.held)){holdT+=dtR;if(holdT>=TUNE.holdFuse)launch()}else holdT=0;
   const dh=((hueT-hue+540)%360)-180;hue=(hue+dh*Math.min(1,dtR*1.5)+360)%360;nebFade=Math.min(1,nebFade+dtR*.6);
 
   // ---- pad input ----
@@ -640,8 +675,8 @@ function update(dtR){
     if(timers.magnet>0&&it.k==='coin'){let bb=null,bd=W*.5;for(const b of balls){if(b.held)continue;const d=Math.hypot(b.x-it.x,b.y-it.y);if(d<bd){bd=d;bb=b}}
       if(bb){const k=Math.min(1,dt*H*1.4/Math.max(bd,1));it.x+=(bb.x-it.x)*k;it.y+=(bb.y-it.y)*k}}
     const pr=it.k==='coin'?coinR*1.3:ballR*1.9;
-    for(const b of balls)if(Math.hypot(b.x-it.x,b.y-it.y)<b.r+pr){collect(it);break}
-    if(!it.dead&&Math.abs(it.y-pad.y)<padR+pr&&Math.abs(it.x-pad.x)<pad.w/2+pr*.5)collect(it);
+    for(const b of balls)if(!b.held&&Math.hypot(b.x-it.x,b.y-it.y)<b.r+pr){collect(it);break}
+    if(!it.dead&&it.k==='pow'&&Math.abs(it.y-pad.y)<padR+pr&&Math.abs(it.x-pad.x)<pad.w/2+pr*.5)collect(it);
     if(it.y>H+30)it.dead=true;
   }
   items=items.filter(i=>!i.dead);
@@ -868,7 +903,8 @@ function drawBalls(){
       const tg=ctx.createLinearGradient(tr[0].x,tr[0].y,tr[n-1].x,tr[n-1].y);tg.addColorStop(0,rgba(col,0));tg.addColorStop(1,rgba(col,.65));ctx.globalAlpha=1;ctx.fillStyle=tg;ctx.fill();
     }
     glow(b.x,b.y,b.r*(pl?7:5),col,.55+Math.sin(T*8)*.08);
-    if(b.held){ctx.globalAlpha=.5+Math.sin(T*6)*.3;ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,b.y,b.r*2+Math.sin(T*6)*2,0,TAU);ctx.stroke()}
+    if(b.held){ctx.globalAlpha=.5+Math.sin(T*6)*.3;ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,b.y,b.r*2+Math.sin(T*6)*2,0,TAU);ctx.stroke();
+      if(started){const f=clamp(holdT/TUNE.holdFuse,0,1),fc=f>.6?'#ff5a7a':'#ffd84a';ctx.globalAlpha=1;ctx.strokeStyle=fc;ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.arc(b.x,b.y,b.r*2.6,-Math.PI/2,-Math.PI/2+TAU*(1-f));ctx.stroke()}}
     // chrome sphere
     NORM();ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.ny,b.nx));ctx.scale(1-.32*b.sq,1+.32*b.sq);ctx.rotate(-Math.atan2(b.ny,b.nx));
     const g=ctx.createRadialGradient(-b.r*.35,-b.r*.4,0,0,0,b.r);g.addColorStop(0,'#ffffff');g.addColorStop(.3,'#eafcff');g.addColorStop(.62,pl?'#ff9be9':accent(0,78));g.addColorStop(1,pl?'#3a0632':'#0b1f3a');
@@ -1003,7 +1039,6 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{if(KMAP[e.key])keys[KMAP[e.key]]=false});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
-window.BounceLab&&BounceLab.menuLinks&&BounceLab.menuLinks($('#labLinks'));
 $('#playBtn').onclick=start;$('#againBtn').onclick=start;$('#resumeBtn').onclick=resume;$('#quitBtn').onclick=toMenu;$('#menuBtn').onclick=toMenu;
 $('#pauseBtn').onclick=()=>{state==='play'?pause():resume()};
 const muteBtn=$('#muteBtn');
@@ -1012,12 +1047,25 @@ muteBtn.onclick=()=>{initAudio();muted=!muted;try{localStorage.setItem('bouncer-
 syncMute();
 const fsBtn=$('#fsBtn');
 if(document.documentElement.requestFullscreen&&document.fullscreenEnabled!==false){fsBtn.style.display='';fsBtn.onclick=()=>{try{(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()).catch(()=>{fsBtn.style.display='none'})}catch(e){fsBtn.style.display='none'}}}
-for(const el of document.querySelectorAll('.seg')){const k=el.dataset.k;for(const [v,l] of SEGS[k]){const bt=document.createElement('button');bt.textContent=l;bt.dataset.v=v;bt.onclick=()=>{S[k]=v;syncSettings();saveSettings()};el.appendChild(bt)}}
+for(const el of document.querySelectorAll('.seg[data-k]')){const k=el.dataset.k;for(const [v,l] of SEGS[k]){const bt=document.createElement('button');bt.textContent=l;bt.dataset.v=v;bt.onclick=()=>{S[k]=v;syncSettings();saveSettings()};el.appendChild(bt)}}
 const sensEl=$('#sens');sensEl.oninput=()=>{S.sens=+sensEl.value;syncSettings();saveSettings()};
-function syncSettings(){sensEl.value=S.sens;$('#sensVal').textContent=(+S.sens).toFixed(1)+'×';for(const el of document.querySelectorAll('.seg'))for(const bt of el.children)bt.classList.toggle('on',Math.abs(+bt.dataset.v-S[el.dataset.k])<1e-6)}
+function syncSettings(){sensEl.value=S.sens;$('#sensVal').textContent=(+S.sens).toFixed(1)+'×';for(const el of document.querySelectorAll('.seg[data-k]'))for(const bt of el.children)bt.classList.toggle('on',Math.abs(+bt.dataset.v-S[el.dataset.k])<1e-6);typeof syncSoundSeg==='function'&&syncSoundSeg()}
 function saveSettings(){try{localStorage.setItem('bouncer-ascent-settings-v4',JSON.stringify(S))}catch(e){}const oh=H;resize();if(oh!==H)pad.y=clamp(pad.y*H/oh,zoneTop,zoneBot)}
 let setReturn='titleOv';
-function openSettings(){if(state==='play')pause();setReturn=state==='paused'?'pauseOv':state==='over'?'overOv':'titleOv';syncSettings();showOv('setOv')}
+// sub-screens (settings, how to play, leaderboard) return to whichever menu opened them
+function openSub(id){if(state==='play')pause();setReturn=state==='paused'?'pauseOv':state==='over'?'overOv':'titleOv';showOv(id)}
+function openSettings(){syncSettings();openSub('setOv')}
+function openHow(){openSub('howOv')}
+function openBoard(){openSub('lbOv');const el=$('#lbList');if(window.BounceLab&&BounceLab.leaderboard)BounceLab.leaderboard(el,{n:10});else el.innerHTML='<div class="bl-glb-msg">Leaderboard unavailable offline.</div>'}
+function toLab(){if(window.BounceLab&&BounceLab.exit)BounceLab.exit();else location.href='../../index.html'}
+for(const k of ['Title','Pause'])$('#howBtn'+k).onclick=openHow;
+for(const k of ['Title','Pause','Over'])$('#lbBtn'+k).onclick=openBoard;
+for(const k of ['Title','Pause'])$('#labBtn'+k).onclick=toLab;
+$('#restartBtn').onclick=start;
+$('#fbBtnPause').onclick=()=>{window.BounceLab&&BounceLab.openFeedback&&BounceLab.openFeedback()};
+$('#howDone').onclick=$('#lbDone').onclick=()=>showOv(setReturn);
+const soundSeg=$('#soundSeg');function syncSoundSeg(){for(const bt of soundSeg.children)bt.classList.toggle('on',(bt.dataset.v==='1')!==muted)}
+for(const bt of soundSeg.children)bt.onclick=()=>{initAudio();muted=bt.dataset.v!=='1';try{localStorage.setItem('bouncer-ascent-muted',muted?'1':'0')}catch(e){}syncMute();syncSoundSeg()};
 $('#gearBtn').onclick=openSettings;$('#setBtnTitle').onclick=openSettings;$('#setBtnPause').onclick=openSettings;
 $('#setDone').onclick=()=>{saveSettings();showOv(setReturn)};
 $('#setReset').onclick=()=>{Object.assign(S,DEF);syncSettings();saveSettings()};

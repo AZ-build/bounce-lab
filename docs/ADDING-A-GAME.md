@@ -30,9 +30,17 @@ window.BounceLab && BounceLab.gameOver(score);
 Optional: pass extra stats, which are saved with the score:
 `BounceLab.gameOver(score, { level: 4, coins: 31 })`.
 
-If the game has a "quit to menu" button, add `BounceLab.menu()` there so the LAB button comes back.
+When the player goes back to the main menu, call `BounceLab.menu()`.
 
-`games/_template/index.html` is a tiny working example of all three.
+## 3b. Give the game its own menus (required)
+Every game stands on its own, with menus in its own style:
+- **Main menu**: Play, How to play, Leaderboard, Settings, Back to the lab
+- **Pause button + pause menu**: Resume, Restart, How to play, Leaderboard, Settings, Main menu, Back to the lab. Pause automatically when the player switches apps
+- **Game over**: Again, Leaderboard, Main menu (the lab adds its bar with scores, share and rating underneath)
+
+The lab gives you the pieces: `BounceLab.leaderboard(element, { n: 10 })` fills your leaderboard screen with the top scores, and `BounceLab.exit()` goes back to the lab. Add `data-menus="own"` to the lab script tag so the lab hides its corner chips.
+
+`games/_template/index.html` is a tiny working example of all of this.
 
 ## 4. Add it to the lobby
 Open `games.js` and copy one of the entries. Change `id`, `title`, `tagline`, `description`, `controls`, `color` and `version`. The new ball appears in the lobby automatically.

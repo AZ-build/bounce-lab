@@ -1288,7 +1288,9 @@ const sfx = {
   thunder() { noise(.7, .25, 3000, .5, 'highpass'); noise(.6, 2.4, 90, .6, 'lowpass', .05); tone(48, 'sine', .4, 1.6, .5); },
   over() { [12, 7, 3, 0].forEach((n, i) => tone(330 * Math.pow(2, n / 12), 'triangle', .14, .5, 0, i * .14)); },
 };
-const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+// player settings (saved on this device)
+const SET = Object.assign({ vibe: 1, steer: 1, glow: 1 }, store.get('summit-settings', {}));
+const buzz = p => { if (!SET.vibe) return; try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
 // ---------------------------------------------------------------- perks (advantages earned at camps)
 const PERKS = {
@@ -1348,13 +1350,6 @@ function chips() {
 // ---------------------------------------------------------------- game state
 let mode = 'title';
 let paused = false;
-if (window.BounceLab && BounceLab.pausable) BounceLab.pausable({
-  pause() { paused = true; P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); $('#power').classList.remove('on'); if (chargeGain) chargeGain.gain.value = 0; if (ac) ac.suspend().catch(() => {}); },
-  resume() { paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); },
-  restart() { paused = false; if (ac) ac.resume().catch(() => {}); for (const id of ['#perks', '#charon']) $(id).classList.add('hide'); $('#fallCount').classList.remove('on'); perkChoices = null; mode = 'over'; start(); },
-  extras: () => [{ label: muted ? 'Sound: off' : 'Sound: on', onClick: () => $('#mute').click() }],
-  offset: { top: 46, right: 6 },
-});
 const S = { score: 0, bonus: 0, maxAlt: 0, lives: 1, maxLives: 1, baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0, fallFrom: 0, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4,
   longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 0, pendingPerk: 0, hitstop: 0, best: store.get('summit-best-h1', 0) };
 const total = () => Math.round(S.baseAlt + Math.max(0, S.maxAlt));
@@ -1386,7 +1381,7 @@ function start() {
   Object.assign(S, { baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0 });
   Object.assign(S, { score: 0, bonus: 0, maxAlt: 0, lives: 1, maxLives: 1, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4, longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 1.5, pendingPerk: 0, hitstop: 0 });
   resetWorld(); chips();
-  mode = 'play';
+  mode = 'play'; paused = false; document.body.classList.add('playing');
   window.BounceLab && BounceLab.start();
   $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide');
   banner(mountainDef().name.toUpperCase(), 'Get the boulder to the summit · hold to wind up, slide to steer, let go to punch');
@@ -1394,7 +1389,7 @@ function start() {
 }
 const QUOTES = ['One must imagine Sisyphus happy.', 'The boulder always comes back down. So does he.', 'The struggle itself toward the heights is enough to fill a heart.', 'The summit was always a little further.', 'He was bored anyway.', 'Back to the bottom. Again.', 'Sisyphus yawns.'];
 function gameOver() {
-  mode = 'over'; sfx.over(); drag = null; P.charging = false; $('#touch').classList.remove('on');
+  mode = 'over'; document.body.classList.remove('playing'); sfx.over(); drag = null; P.charging = false; $('#touch').classList.remove('on');
   if (chargeGain) chargeGain.gain.value = 0;
   const score = total(), isBest = score > S.best;
   if (isBest) { S.best = score; store.set('summit-best-h1', score); }
@@ -1555,7 +1550,7 @@ function endCharge() { if (!P.charging) return; P.charging = false; strike(P.cha
 // one finger does everything: press anywhere to wind up, slide to steer while holding, let go to punch (a tap is a quick jab)
 window.addEventListener('pointerdown', e => {
   audio();
-  if (isUI(e.target) || mode !== 'play' || drag) return;
+  if (isUI(e.target) || mode !== 'play' || drag || paused) return;
   e.preventDefault();
   drag = { id: e.pointerId, x: e.clientX };
   beginCharge();
@@ -1563,7 +1558,7 @@ window.addEventListener('pointerdown', e => {
 }, { passive: false });
 window.addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
-  const k = (CFG.hw * 2 * CFG.dragGain) / Math.min(innerWidth, 520);
+  const k = (CFG.hw * 2 * CFG.dragGain * SET.steer) / Math.min(innerWidth, 520);
   P.toff += (e.clientX - drag.x) * k;
   drag.x = e.clientX;
   touchEl.style.left = e.clientX + 'px'; touchEl.style.top = e.clientY + 'px';
@@ -1578,6 +1573,8 @@ window.addEventListener('pointercancel', endPointer);
 const keys = {};
 window.addEventListener('keydown', e => {
   if (e.repeat) { if (e.code === 'Space') e.preventDefault(); return; }
+  if (e.code === 'Escape' || e.code === 'KeyP') { e.preventDefault(); if (paused) resumeGame(); else pauseGame(); return; }
+  if (!$('#layer').classList.contains('hide')) return;
   keys[e.code] = true;
   if (e.code === 'Space') { e.preventDefault(); if (mode === 'play') beginCharge(); else if (mode !== 'perk') start(); }
   else if (e.code === 'Enter' && mode !== 'play' && mode !== 'perk') start();
@@ -1593,7 +1590,57 @@ $('#letBtn').addEventListener('click', () => payCharon(false));
 $('#mute').addEventListener('click', () => { muted = !muted; store.set('summit-muted', muted); $('#mute').textContent = muted ? '🔇' : '🔊'; if (master) master.gain.value = muted ? 0 : .55; });
 $('#mute').textContent = muted ? '🔇' : '🔊';
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
-document.addEventListener('visibilitychange', () => { if (document.hidden && P.charging) { P.charging = false; P.charge = 0; } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (P.charging) { P.charging = false; P.charge = 0; } pauseGame(); } });
+
+// ---------------------------------------------------------------- menus
+// Main menu = the title screen. Pause menu and the sub-screens (how to play, leaderboard, settings) share #layer;
+// a sub-screen goes back to whichever menu opened it.
+const OPTS = [['sound', 'Sound', [[1, 'On'], [0, 'Off']]], ['vibe', 'Vibration', [[1, 'On'], [0, 'Off']]],
+  ['steer', 'Steering', [[0.75, 'Slow'], [1, 'Normal'], [1.3, 'Fast']]], ['glow', 'Glow', [[1, 'On'], [0, 'Off']]]];
+$('#setList').innerHTML = OPTS.map(([k, l, vs]) => `<div class="opt"><span>${l}</span><div class="seg" data-k="${k}">${vs.map(([v, t]) => `<button data-v="${v}">${t}</button>`).join('')}</div></div>`).join('');
+const setVal = k => k === 'sound' ? (muted ? 0 : 1) : SET[k];
+function syncSet() { document.querySelectorAll('#setList .seg').forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +setVal(g.dataset.k)))); }
+document.querySelectorAll('#setList .seg button').forEach(b => b.addEventListener('click', () => {
+  const k = b.parentNode.dataset.k, v = +b.dataset.v;
+  if (k === 'sound') { if (!!v === muted) $('#mute').click(); }
+  else { SET[k] = v; store.set('summit-settings', SET); if (k === 'glow') bloom.enabled = !!v; if (k === 'vibe') buzz(12); }
+  syncSet();
+}));
+if (!SET.glow) bloom.enabled = false;
+let panelBack = null;
+const RUNNING = () => mode !== 'title' && mode !== 'over';
+function showSec(id) {
+  document.querySelectorAll('#layer .sec').forEach(x => x.classList.toggle('on', x.id === 's-' + id));
+  $('#layer').classList.toggle('hide', !id); $('#layer').scrollTop = 0;
+}
+function openSub(id) {
+  panelBack = paused ? 'pause' : null; showSec(id);
+  if (id === 'set') syncSet();
+  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 10, unit: ' m' }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
+}
+function haltInput() { P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); $('#power').classList.remove('on'); if (chargeGain) chargeGain.gain.value = 0; }
+function pauseGame() { if (!RUNNING() || paused || booting) return; paused = true; haltInput(); if (ac) ac.suspend().catch(() => {}); showSec('pause'); }
+function resumeGame() { if (!paused) return; paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); showSec(null); }
+function clearRun() { for (const id of ['#perks', '#charon']) $(id).classList.add('hide'); $('#fallCount').classList.remove('on'); perkChoices = null; haltInput(); }
+function toMenu() {
+  paused = false; showSec(null); clearRun(); if (ac) ac.resume().catch(() => {});
+  MT = 0; resetHeights(); sumFx.active = false; sumFx.dawn = 0; $('#fade').classList.remove('on');
+  resetWorld(); $('#perkChips').innerHTML = '';
+  mode = 'title'; document.body.classList.remove('playing');
+  $('#over').classList.add('hide'); $('#hud').classList.add('hide'); $('#title').classList.remove('hide');
+  $('#bestT').textContent = S.best ? 'Best ' + S.best + ' m' : '';
+  window.BounceLab && BounceLab.menu();
+}
+function toLab() { if (window.BounceLab && BounceLab.exit) BounceLab.exit(); else location.href = '../../index.html'; }
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openSub(b.dataset.open)));
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showSec(panelBack)));
+document.querySelectorAll('[data-lab]').forEach(b => b.addEventListener('click', toLab));
+$('#pauseB').addEventListener('click', pauseGame);
+$('#resumeBtn').addEventListener('click', resumeGame);
+$('#restartBtn').addEventListener('click', () => { paused = false; showSec(null); clearRun(); if (ac) ac.resume().catch(() => {}); mode = 'over'; start(); });
+$('#quitBtn').addEventListener('click', toMenu);
+$('#overMenu').addEventListener('click', toMenu);
+$('#fbBtn').addEventListener('click', () => window.BounceLab && BounceLab.openFeedback && BounceLab.openFeedback());
 
 // ---------------------------------------------------------------- strike
 const axisPt = new THREE.Vector3(), nrm = new THREE.Vector3();

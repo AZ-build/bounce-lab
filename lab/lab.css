@@ -147,3 +147,18 @@
   background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); display: block; box-sizing: border-box; }
 .bl-links .bl-lbtn:active { background: rgba(255,255,255,.14); }
 .bl-links .bl-back { color: #a9b4c6; background: none; border-color: transparent; }
+
+/* leaderboard inside a game's own menu (BounceLab.leaderboard): inherits the game's font and colour; games can restyle it */
+.bl-glb { width: 100%; --bl-glb-hi: #ffc23a; }
+.bl-glb ol { list-style: none; margin: 0; padding: 0; }
+.bl-glb li { display: grid; grid-template-columns: 2em 1fr auto; align-items: center; gap: .6em; padding: .55em .7em; border-top: 1px solid rgba(255,255,255,.08); text-align: left; font-variant-numeric: tabular-nums; }
+.bl-glb li:first-child { border-top: 0; }
+.bl-glb li.me { background: color-mix(in srgb, var(--bl-glb-hi) 16%, transparent); border-radius: 10px; }
+.bl-glb .r { opacity: .6; font-weight: 700; }
+.bl-glb li:nth-child(1) .r { color: #ffc23a; opacity: 1; } .bl-glb li:nth-child(2) .r { color: #cfe3f0; opacity: 1; } .bl-glb li:nth-child(3) .r { color: #e3a46b; opacity: 1; }
+.bl-glb .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-glb .s { font-weight: 700; }
+.bl-glb-msg { opacity: .65; font-size: .9em; text-align: center; padding: .8em 0; }
+
+/* games with their own menus (data-menus="own") carry their own back-to-lab button */
+#bl-root.bl-own-menus #bl-top { display: none; }

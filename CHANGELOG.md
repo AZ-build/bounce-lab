@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## [Bounce Lab 1.11: every game has its own menus] - 2026-11-24
+- Every game now has its own main menu and pause menu, each in that game's style:
+  - Main menu: Play, How to play, Leaderboard, Settings, Back to the lab
+  - Pause button and pause menu: Resume, Restart, How to play, Leaderboard, Settings, Main menu, Back to the lab, Suggest an improvement
+  - Game over: Again, Leaderboard, Main menu (plus the lab's score bar underneath)
+- Leaderboard inside each game: top 10 scores (Summit's in metres), shown in the game's own style
+- New settings screens:
+  - Bouncer: sound, vibration, drag speed, screen shake
+  - Smashball: sound, vibration, camera (close / normal / far), bot (easy / normal / hard), glow
+  - Summit: sound, vibration, steering speed, glow
+  - Ascent: its existing settings plus a sound switch
+- How to play moved off the title screens into its own screen, so the title screens are short
+- Bouncer no longer starts when you tap anywhere on the title screen; tap Play. Games pause by themselves when you switch apps; Esc or P pauses on a keyboard
+- The lab's corner chips (Lab / share) are hidden in games, since each game now has its own Back to the lab
+- Ascent v6.1: no more parking the orb on the pad to farm. Once the climb has started, a held orb launches itself after 2.5 seconds (a ring around it counts down). A held orb collects nothing, and the pad only catches power-ups, not coins
+- New game template (games/_template) shows the full menu set; docs/ADDING-A-GAME.md makes own menus a rule
+- Lab kit: BounceLab.leaderboard(element) for games' own leaderboard screens; data-menus="own" on the script tag. Cache-buster lab.js?v=1.11
+
 ## [Bounce Lab 1.10 + Ascent v6 "Earned Clutch"] - 2026-11-24
 - Fix: tapping PLAY in Ascent sent you back to the lab. The hidden pause screen's "Back to Bounce Lab" link was sitting invisibly on top of the PLAY button and catching the tap. Hidden menus can no longer catch taps in any game
 - Fix: the game-over bar no longer peeks out at the bottom of the screen while you play (that was the cut-off strip in Summit). It's fully hidden until a run ends

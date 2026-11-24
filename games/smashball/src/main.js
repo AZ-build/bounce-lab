@@ -429,7 +429,16 @@ const sfx = {
   win() { [0, 4, 7, 12, 7, 12, 16].forEach((n, i) => tone(523 * Math.pow(2, n / 12), 'triangle', .13, .35, 0, i * .09)); },
   lose() { [7, 3, 0, -5].forEach((n, i) => tone(220 * Math.pow(2, n / 12), 'triangle', .12, .45, 0, i * .15)); },
 };
-const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+// player settings (saved on this device)
+const SET_DEF = { vibe: 1, cam: 1, bot: 1, glow: 1 };
+const SET = Object.assign({}, SET_DEF, store.get('smashball-settings', {}));
+const BASE = { camDist: CFG.camDist, camH: CFG.camH, botSpeed: CFG.botSpeed, botSmash: CFG.botSmash };
+function applySettings() {
+  CFG.camDist = BASE.camDist * SET.cam; CFG.camH = BASE.camH * (0.6 + 0.4 * SET.cam);
+  CFG.botSpeed = BASE.botSpeed * [0, 0.8, 1, 1.15][Math.round(SET.bot * 2)] ; CFG.botSmash = BASE.botSmash * [0, 0.5, 1, 1.4][Math.round(SET.bot * 2)];
+}
+applySettings();
+const buzz = p => { if (!SET.vibe) return; try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
 // ---------------------------------------------------------------- game state
 let mode = 'title';           // title | play | over
@@ -716,9 +725,9 @@ function kickoff() {
 }
 function start() {
   if (mode === 'play') return;
-  audio();
+  audio(); if (ac) ac.resume().catch(() => {});
   Object.assign(S, { phase: 'kickoff', clock: CFG.matchTime, golden: false, gy: 0, gb: 0, pts: 0, touches: 0, smashes: 0, saves: 0, fastest: 0, smashGoals: 0, hitstop: 0, slow: 1, slowT: 0, shake: 0 });
-  mode = 'play';
+  mode = 'play'; paused = false; document.body.classList.add('playing');
   window.BounceLab && BounceLab.start();
   $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide');
   kickoff();
@@ -755,7 +764,7 @@ function scored(s) { // s = goal the ball went into (+1 yours, -1 the bot's)
   hud();
 }
 function endMatch() {
-  mode = 'over'; joyEnd();
+  mode = 'over'; joyEnd(); document.body.classList.remove('playing');
   const won = S.gy > S.gb;
   if (won) S.pts += 250;
   const score = S.pts, isBest = score > S.best;
@@ -802,7 +811,7 @@ function doTap(x, y) {
 function joyEnd() { joy = null; stick.x = stick.y = 0; joyEl.classList.remove('on'); }
 window.addEventListener('pointerdown', e => {
   audio();
-  if (isUI(e.target) || mode !== 'play') return;
+  if (isUI(e.target) || mode !== 'play' || paused) return;
   e.preventDefault();
   if (joy) { doTap(e.clientX, e.clientY); return; } // a second finger taps
   joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now(), moved: 0 };
@@ -832,6 +841,8 @@ window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
 const keys = {};
 window.addEventListener('keydown', e => {
+  if (e.code === 'Escape' || e.code === 'KeyP') { e.preventDefault(); if (paused) resumeGame(); else pauseGame(); return; }
+  if (!$('#layer').classList.contains('hide')) return;
   keys[e.code] = true;
   if (e.code === 'Space') { e.preventDefault(); if (e.repeat) return; if (mode === 'play') doTap(innerWidth / 2, innerHeight * .75); else start(); }
   else if (e.code === 'Enter' && mode !== 'play') start();
@@ -847,7 +858,7 @@ function muteIcon() { $('#mute').innerHTML = muted ? ICON_OFF : ICON_ON; $('#mut
 $('#mute').addEventListener('click', () => { muted = !muted; store.set('smashball-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; });
 muteIcon();
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
-document.addEventListener('visibilitychange', () => { if (document.hidden) joyEnd(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { joyEnd(); pauseGame(); } });
 // the stick is read in the camera's frame: up = the way the camera looks (toward the ball)
 const camF = V();
 function playerInput() {
@@ -1018,14 +1029,51 @@ cameraUpdate(1 / 60, true);
 render(1 / 60, 0);
 try { renderer.compile(scene, camera); } catch {}
 composer.render();
-let last = performance.now(), acc = 0, paused = false;
-// Bounce Lab pause menu (its button sits under the sound toggle)
-if (window.BounceLab && BounceLab.pausable) BounceLab.pausable({
-  pause() { paused = true; joyEnd(); if (ac) ac.suspend().catch(() => {}); },
-  resume() { paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); },
-  restart() { paused = false; if (ac) ac.resume().catch(() => {}); mode = 'over'; start(); },
-  offset: { top: 48, right: 4 },
-});
+// ---------------------------------------------------------------- menus
+// Main menu = the title screen. Pause menu and the sub-screens (how to play, leaderboard, settings) share #layer;
+// a sub-screen goes back to whichever menu opened it.
+const OPTS = [['sound', 'Sound', [[1, 'On'], [0, 'Off']]], ['vibe', 'Vibration', [[1, 'On'], [0, 'Off']]],
+  ['cam', 'Camera', [[0.8, 'Close'], [1, 'Normal'], [1.25, 'Far']]], ['bot', 'Bot', [[0.5, 'Easy'], [1, 'Normal'], [1.5, 'Hard']]], ['glow', 'Glow', [[1, 'On'], [0, 'Off']]]];
+$('#setList').innerHTML = OPTS.map(([k, l, vs]) => `<div class="opt"><span>${l}</span><div class="seg" data-k="${k}">${vs.map(([v, t]) => `<button data-v="${v}">${t}</button>`).join('')}</div></div>`).join('');
+const setVal = k => k === 'sound' ? (muted ? 0 : 1) : SET[k];
+function syncSet() { document.querySelectorAll('#setList .seg').forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +setVal(g.dataset.k)))); }
+document.querySelectorAll('#setList .seg button').forEach(b => b.addEventListener('click', () => {
+  const k = b.parentNode.dataset.k, v = +b.dataset.v;
+  if (k === 'sound') { muted = !v; store.set('smashball-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; }
+  else { SET[k] = v; store.set('smashball-settings', SET); applySettings(); if (k === 'glow') bloom.enabled = !!v; if (k === 'vibe') buzz(12); }
+  syncSet();
+}));
+bloom.enabled = !!SET.glow;
+let last = performance.now(), acc = 0, paused = false, panelBack = null;
+function showSec(id) {
+  document.querySelectorAll('#layer .sec').forEach(x => x.classList.toggle('on', x.id === 's-' + id));
+  $('#layer').classList.toggle('hide', !id); $('#layer').scrollTop = 0;
+}
+function openSub(id) {
+  panelBack = paused ? 'pause' : null; showSec(id);
+  if (id === 'set') syncSet();
+  if (id === 'lb') { if (window.BounceLab && BounceLab.leaderboard) BounceLab.leaderboard($('#lbList'), { n: 10 }); else $('#lbList').textContent = 'Leaderboard unavailable.'; }
+}
+function pauseGame() { if (mode !== 'play' || paused) return; paused = true; joyEnd(); if (ac) ac.suspend().catch(() => {}); showSec('pause'); }
+function resumeGame() { if (!paused) return; paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); showSec(null); }
+function toMenu() {
+  paused = false; showSec(null); joyEnd(); if (ac) ac.resume().catch(() => {});
+  mode = 'title'; document.body.classList.remove('playing'); hint('');
+  $('#over').classList.add('hide'); $('#hud').classList.add('hide'); $('#title').classList.remove('hide');
+  $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
+  placeKickoff(); ball.p.y = BR; titleT = 0;
+  window.BounceLab && BounceLab.menu();
+}
+function toLab() { if (window.BounceLab && BounceLab.exit) BounceLab.exit(); else location.href = '../../index.html'; }
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openSub(b.dataset.open)));
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showSec(panelBack)));
+document.querySelectorAll('[data-lab]').forEach(b => b.addEventListener('click', toLab));
+$('#pauseB').addEventListener('click', pauseGame);
+$('#resumeBtn').addEventListener('click', resumeGame);
+$('#restartBtn').addEventListener('click', () => { paused = false; showSec(null); if (ac) ac.resume().catch(() => {}); mode = 'over'; start(); });
+$('#quitBtn').addEventListener('click', toMenu);
+$('#overMenu').addEventListener('click', toMenu);
+$('#fbBtn').addEventListener('click', () => window.BounceLab && BounceLab.openFeedback && BounceLab.openFeedback());
 const FIXED = 1 / 120;
 const perf = { t: 0, n: 0 };
 function watchPerf(dt) {

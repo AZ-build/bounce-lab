@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
 | smashball | Smashball (was Rebound) | v4 Goal | v1–v4 | Session 2: 3D striker. v4 (Session 5) rebuilt from source: 1v1 vs a bot, ball cam, tap = jump + smash, goal celebration |
-| ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
+| ascent | Ascent | v6 Earned Clutch | v1–v6 | Session 3: vertical scroller, curved pad. v6: clutch slow-mo is a banked power-up (C) |
 | summit | Summit | v9 The Summits | v1–v9 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
 
 ## How a game plugs in
@@ -38,6 +38,11 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 - Lobby physics knobs: `BR` (ball size, 0.75 × R), `G` (gravity, H × 1.6), `V` (parade speed) in `layout()`; per-game hop feel in `PERSONALITY`
 - Cards show the current version only; older ones live under "Earlier versions"
 
+## Lobby obstacles (Lab 1.10)
+- Drawn in two passes in `render()`: `obsFloor()` (track reflection via `reflectImg()`, soft footprint shadows via `footShadow()` / `blotShadow()`, coloured floor spill) for all, then `obsBody()`, farthest from the middle first
+- Kinds: block → `drawBlock()` (front face cached by `blockFace()`), pillar → `drawPylon()` (body cached by `pylonBody()`), spring → `drawLiftPad()` (uses `o.k` compression and `o.fireT` launch flash, set in `step()`)
+- `RIM` is the cyan wall-light rim colour. `?debug` exposes `window.__lobby` (obs, pace(), holdCourse()) for screenshots
+
 ## Lobby mini-game (Lab 1.7)
 - Gravity: `G = G0 × gMul`, set by `setGravity()` from the wall dial (`#grav`: SVG gauge, knob turned by drag/scroll via `nudgeT()`). `hop()` keeps launch speed fixed, so gravity changes hop height
 - Surge: `surge()`, recharge time `SURGE_TIME`, lightning in `zaps`
@@ -57,6 +62,10 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Lobby registry is `games.js` (not JSON) so the site also works when opened from disk
 - Every new version: keep the old file in `versions/`, update `games.js`
 - Phone-first; lab UI stops touches from reaching the game
+
+## Ascent notes (v6)
+- Clutch: `updateClutch()`. Setting `S.clutch2`: 0 off, 1 power-up (default), 2 always. Power-up `POW.clutch` adds to `clutchCharges` (max `TUNE.clutchMax`); clutch only fires when the last free orb is below `zoneTop` (`TUNE.clutchZone`) and predicted to miss the pad, and uses a charge
+- Settings saved as `bouncer-ascent-settings-v4`
 
 ## Summit notes (v9)
 - Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v9.html (change the version file name in package.json for each new version). Older versions in versions/ are frozen archives
@@ -93,7 +102,9 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 
 ## Lab rules for every game (since lab 1.9)
 - Every game must call `BounceLab.pausable({ pause, resume, restart })` (or have its own pause screen and call `BounceLab.menuLinks(el)` inside it). The lab draws the pause button (use `offset: { top, right }` to dodge the HUD) and the pause menu: Resume, Restart, extras, rate, suggest, back to lab
-- Rating and back-to-lab live only in menus: title (Lab + Rate chips), pause menu, game-over bar. Never during play
+- Rating lives only on the game-over bar and the lab card (since lab 1.10). Back-to-lab: the Lab chip on title screens, the pause menu, the game-over bar. Never during play
+- Hidden overlays must never catch taps: `.bl-links` inherits pointer-events from its menu (a hidden Ascent pause screen once swallowed the PLAY tap)
+- Leaderboard = top N scores (`topScores`), not best per player
 - Menus must fit short phones: scrollable overlays with `margin-top: auto` on the first child (not `justify-content: center/flex-end` with overflow), padding for safe areas, the Lab chips (~52px) and the game-over bar (~96px)
-- Bump the `lab.js?v=` cache-buster in every game when lab.js/lab.css change (currently 1.9)
+- Bump the `lab.js?v=` cache-buster in every game when lab.js/lab.css change (currently 1.10; also in games/summit/src/build.mjs and games/smashball/src/build.mjs)
 - Heavy games show a loading screen first (Summit: `#boot` + `bootStep()`; the game script is a module so the page paints before it runs)

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [Bounce Lab 1.10 + Ascent v6 "Earned Clutch"] - 2026-11-24
+- Fix: tapping PLAY in Ascent sent you back to the lab. The hidden pause screen's "Back to Bounce Lab" link was sitting invisibly on top of the PLAY button and catching the tap. Hidden menus can no longer catch taps in any game
+- Fix: the game-over bar no longer peeks out at the bottom of the screen while you play (that was the cut-off strip in Summit). It's fully hidden until a run ends
+- Rating only where it belongs: after a game (stars on the game-over bar) and on the game's card in the lab. The "Rate" chip on game menus and the stars in pause menus are gone. Pause menus keep Resume, Restart, Suggest an improvement and Back to Bounce Lab, so there's always a way back to the lab
+- Leaderboards now show the top 10 scores, not the top 10 players: the same name can appear several times. Only your own posted run is highlighted
+- Ascent v6: clutch slow-mo is now earned. Grab the new purple C power-up to bank a clutch save (up to 3, shown under your lives). It only fires once your last orb has dropped into the pad's zone and is about to slip past, and it uses up the save, so you can't trigger it whenever you like. Settings > Clutch slow-mo: Power-up (default), Always (the old behaviour, easier) or Off. v5 kept at versions/v5.html
+- Lobby obstacles redesigned as lab hardware:
+  - Blocks are machined lab modules: satin graphite body under a brushed-metal cap, a recessed light bar that wraps round the corner, panel seam, screws, louvres, a stencilled serial and a blinking status light. The top catches a cyan rim from the wall strip
+  - Pillars are chrome conduit pylons: round, with banded joints, a glass slot showing the neon core, and a faint beacon on top
+  - The spring is now a mag-lift pad: a housing with a lit well, two hydraulic rams and a floating emitter plate with pulsing rings. A launch drops the plate, flashes it, fires a beam up and kicks out a shock ring
+  - Shadows are soft footprints shaped like the object (no more round black ovals), balls get soft shadows too, and obstacles are faintly mirrored in the steel track with coloured light spilling onto the floor
+- Cache-busters bumped: lab.js?v=1.10 in every game, lab scripts ?v=1.10 in the lobby and admin
+
 ## [Bounce Lab 1.9: pause, rate and back to the lab everywhere] - 2026-11-23
 - Every game can now be paused: a pause button appears while you play (Summit, Bouncer and Smashball get the lab's pause button under their sound toggle; Bouncer Ascent keeps its own). Switching apps or tabs pauses automatically. Esc or P also pauses on a keyboard
 - The pause menu: Resume, Restart, rate the game with stars, Suggest an improvement, and Back to Bounce Lab (Ascent's own pause screen gets the same rate / suggest / back block)

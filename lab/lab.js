@@ -9,7 +9,7 @@
      BounceLab.pausable({ pause() {...}, resume() {...}, restart() {...} })   // lab shows a pause button + menu
        options: extras: [{ label, onClick }] or a function returning that list, offset: { top, right } (px, to dodge your HUD),
                 button: false (you draw your own pause button and call BounceLab.pause()), keys: false (you handle Esc/P yourself)
-     Games with their own pause/menu screens can drop the lab's rate / feedback / back-to-lab block into them:
+     Games with their own pause/menu screens can drop the lab's suggest / back-to-lab block into them:
        BounceLab.menuLinks(element)
 */
 (function () {
@@ -97,7 +97,7 @@
     const root = document.createElement('div');
     root.id = 'bl-root';
     root.innerHTML = `
-      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>Lab</a><button id="bl-ratechip" aria-label="Rate this game and suggest improvements">&#9733; Rate</button><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
+      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>Lab</a><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
       <div id="bl-bar" role="toolbar" aria-label="Bounce Lab">
         <button class="bl-home" aria-label="Back to the lab">&#9664;</button>
         ${NO_BOARD ? '<button class="bl-board bl-fbbtn"><span>Leave feedback</span></button>' : '<button class="bl-board"><span>Scores</span></button>'}
@@ -152,7 +152,6 @@
 
     $('#bl-chip').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
     $('#bl-sharechip').addEventListener('click', shareGame);
-    $('#bl-ratechip').addEventListener('click', () => openSheet('fb'));
     $('#bl-pausebtn').addEventListener('click', () => API.pause());
     $('#bl-resume').addEventListener('click', () => API.resume());
     fillLinks($('#bl-plinks'));
@@ -201,19 +200,15 @@
     if (pauser.restart) list.unshift({ label: 'Restart', onClick: () => { setPaused(false); pauser.restart(); } });
     for (const it of list) { const b = document.createElement('button'); b.className = 'bl-btn bl-ghost'; b.textContent = it.label; b.addEventListener('click', () => { it.onClick && it.onClick(); if (state.paused && !it.keepOpen) buildExtras(); }); box.appendChild(b); }
   }
-  // rate / suggest / back-to-lab block: used in the lab's pause menu and in games' own menus
+  // suggest / back-to-lab block: used in the lab's pause menu and in games' own menus.
+  // Rating lives only on the game-over bar and the lab card, never mid-game.
   function fillLinks(el) {
-    const g = info();
     el.classList.add('bl-links');
-    el.innerHTML = `<div class="bl-lq">Enjoying ${esc(g.title || 'this game')}?</div>
-      <div class="bl-starrow">${[1,2,3,4,5].map(i => `<button class="bl-star" data-s="${i}" aria-label="${i} stars">&#9733;</button>`).join('')}</div>
-      <button class="bl-lbtn bl-suggest">Suggest an improvement</button>
+    el.innerHTML = `<button class="bl-lbtn bl-suggest">Suggest an improvement</button>
       <a class="bl-lbtn bl-back" href="${new URL('index.html', ROOT_URL).href}">&#9664;&nbsp; Back to Bounce Lab</a>`;
-    el.querySelectorAll('.bl-star').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); rate(+b.dataset.s, false); toast('Thanks for rating!'); }));
     el.querySelector('.bl-suggest').addEventListener('click', e => { e.stopPropagation(); openSheet('fb'); });
     el.querySelector('.bl-back').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
     ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
-    paintStars(S.ls.get(key('rating'), 0));
   }
   function paintStars(n) { document.querySelectorAll('#bl-root .bl-star, .bl-links .bl-star').forEach(s => s.classList.toggle('on', +s.dataset.s <= n)); }
   function showTab(t) {
@@ -285,7 +280,9 @@
     try {
       const rows = await S.topScores(GAME, 10);
       const myName = (S.ls.get('bouncelab-name', '') || '').toLowerCase();
-      list.innerHTML = rows.map((r, i) => `<li class="${r.name && r.name.toLowerCase() === myName ? 'me' : ''}"><span class="bl-pos">${i + 1}</span><span class="bl-nm">${esc(r.name || 'anon')}</span><span class="bl-sc">${fmt(r.score)}</span></li>`).join('');
+      let marked = false;   // the same name can show up several times: light up this run's score once, else your best
+      const isMe = r => { if (marked || !r.name || r.name.toLowerCase() !== myName) return false; if (state.posted && r.score !== state.score) return false; return (marked = true); };
+      list.innerHTML = rows.map((r, i) => `<li class="${isMe(r) ? 'me' : ''}"><span class="bl-pos">${i + 1}</span><span class="bl-nm">${esc(r.name || 'anon')}</span><span class="bl-sc">${fmt(r.score)}</span></li>`).join('');
       msg.textContent = rows.length ? '' : 'No scores yet. Be the first!';
     } catch (e) { msg.textContent = 'Leaderboard is offline right now.'; }
   }

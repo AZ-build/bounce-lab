@@ -103,14 +103,14 @@ window.BOUNCE_LAB_GAMES = [
     "id": "ascent",
     "title": "Ascent",
     "tagline": "Vertical neon climber",
-    "description": "Move a curved pad to bounce orbs up through falling obstacles. Grab power-ups, juggle multi-orb, and survive the slow-mo clutch.",
+    "description": "Move a curved pad to bounce orbs up through falling obstacles. Grab power-ups, juggle multi-orb, and bank a clutch save for when your last orb slips.",
     "controls": "Drag anywhere to move the pad",
     "color": "#ff4fd8",
     "icon": "up",
-    "version": "v5",
-    "versionName": "Clutch",
+    "version": "v6",
+    "versionName": "Earned Clutch",
     "added": "2026-11-21",
-    "updated": "2026-11-21",
+    "updated": "2026-11-24",
     "status": "prototype",
     "versions": [
       {
@@ -137,6 +137,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v5",
         "name": "Clutch slow-mo",
         "file": "versions/v5.html"
+      },
+      {
+        "v": "v6",
+        "name": "Earned clutch",
+        "file": "versions/v6.html"
       }
     ]
     },

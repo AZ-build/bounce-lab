@@ -28,19 +28,13 @@
   const cleanName = n => String(n || '').replace(/[<>]/g, '').trim().slice(0, 16);
   const cleanText = t => String(t || '').replace(/\u0000/g, '').trim().slice(0, 1000);
   const toMs = ts => ts && ts.toMillis ? ts.toMillis() : (typeof ts === 'number' ? ts : Date.now());
-  function bestPerName(rows, n) {
-    const seen = new Set(), out = [];
-    for (const r of rows) { const k = (r.name || '').toLowerCase(); if (seen.has(k)) continue; seen.add(k); out.push(r); if (out.length >= n) break; }
-    return out;
-  }
-
   // ---------- LOCAL (demo) back end ----------
   const LK = (g, kind) => 'bouncelab-demo:' + g + ':' + kind;
   const Local = {
     mode: 'demo',
     async topScores(g, n = 10) {
-      const rows = ls.get(LK(g, 'scores'), []).sort((a, b) => b.score - a.score);
-      return bestPerName(rows, n);
+      // top N scores (the same player can appear more than once)
+      return ls.get(LK(g, 'scores'), []).sort((a, b) => b.score - a.score).slice(0, n);
     },
     async postScore(g, e) {
       const rows = ls.get(LK(g, 'scores'), []);
@@ -94,10 +88,10 @@
     mode: 'online',
     async topScores(g, n = 10) {
       const { fs, db } = await loadFirebase();
-      const q = fs.query(fs.collection(db, ROOT, g, 'scores'), fs.orderBy('score', 'desc'), fs.limit(60));
+      // top N scores (the same player can appear more than once)
+      const q = fs.query(fs.collection(db, ROOT, g, 'scores'), fs.orderBy('score', 'desc'), fs.limit(n));
       const snap = await fs.getDocs(q);
-      const rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data(), { ts: toMs(d.data().ts) }));
-      return bestPerName(rows, n);
+      return snap.docs.map(d => Object.assign({ id: d.id }, d.data(), { ts: toMs(d.data().ts) }));
     },
     async postScore(g, e) {
       const { fs, db } = await loadFirebase();

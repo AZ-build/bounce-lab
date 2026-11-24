@@ -144,12 +144,12 @@ window.BOUNCE_LAB_GAMES = [
     "id": "summit",
     "title": "Summit",
     "tagline": "Punch the boulder up an endless mountain",
-    "description": "Sisyphus is bored. The marble statue trudges up an endless mountain road punching a giant boulder ahead of him, blocking it when it rolls back, and leaping crevasses. Use the bridges and launch ramps, and climb through the clouds into the sunrise.",
+    "description": "Sisyphus is bored. The marble statue trudges up an endless mountain road punching a giant boulder ahead of him, blocking it when it rolls back, and leaping crevasses. Cross old marble bridges, launch off rock shelves, pass through ancient gateways and climb through the clouds toward the summit.",
     "controls": "Hold anywhere to wind up, slide to steer, let go to punch",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v6",
-    "versionName": "The Statue",
+    "version": "v7",
+    "versionName": "The Old Road",
     "added": "2026-11-22",
     "updated": "2026-11-23",
     "status": "prototype",
@@ -183,6 +183,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v6",
         "name": "The Statue",
         "file": "versions/v6.html"
+      },
+      {
+        "v": "v7",
+        "name": "The Old Road",
+        "file": "versions/v7.html"
       }
     ]
   }

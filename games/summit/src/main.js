@@ -1,4 +1,4 @@
-// SUMMIT v6 "The Statue" — a Sisyphus game for Bounce Lab.
+// SUMMIT v7 "The Old Road" — a Sisyphus game for Bounce Lab.
 // Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
 // endless mountain road, hurling a giant boulder ahead and smashing it again when it
 // rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
@@ -28,7 +28,7 @@ const STAGES = [
   { name: 'The Foothills', note: 'Wind up, let go, smash it uphill.', deg: 8, rocks: .45, tumble: 0, gaps: 0, gates: 0, ridge: 0, tint: 0x3ef6ff },
   { name: 'The Switchback', note: 'Rockfall from the cliff. Dodge it.', deg: 10.5, rocks: .5, tumble: 1, gaps: 0, gates: 0, ridge: 0, tint: 0xffb43a },
   { name: 'The Crevasses', note: 'Smash it clean over the gaps.', deg: 12, rocks: .4, tumble: .45, gaps: 1, gates: 0, ridge: 0, tint: 0xff4fa0 },
-  { name: 'The Blast Doors', note: 'Lab doors slide across the road.', deg: 13.5, rocks: .35, tumble: .5, gaps: .35, gates: 1, ridge: 0, tint: 0x7dff6a },
+  { name: 'The Clashing Rocks', note: 'Stone blocks grind across the road.', deg: 13.5, rocks: .35, tumble: .5, gaps: .35, gates: 1, ridge: 0, tint: 0x7dff6a },
   { name: 'The Ridge', note: 'Nothing on either side now.', deg: 14.5, rocks: .3, tumble: .4, gaps: .35, gates: .3, ridge: 1, tint: 0xa77bff },
 ];
 function stageDef(k) {
@@ -227,6 +227,25 @@ const rockC = rockCanvas(512);
 const groundMap = tex(rockC), groundBump = tex(rockC, 1, false);
 const steelMap = tex(steelCanvas(256)), concreteMap = tex(concreteCanvas(256));
 const hazardTex = tex(noiseCanvas(128, (x, s) => { x.fillStyle = '#1a1a1a'; x.fillRect(0, 0, s, s); x.fillStyle = '#e7b52c'; for (let i = -s; i < s * 2; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 16, 0); x.lineTo(i + 16 - s, s); x.lineTo(i - s, s); x.fill(); } }));
+// ---- the old works on the mountain: weathered marble, worn grey stone, bronze, firelight
+const stoneC = noiseCanvas(256, (x, s) => {
+  x.fillStyle = '#cdc4b4'; x.fillRect(0, 0, s, s);
+  for (let i = 0; i < 70; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '96,88,78' : '255,250,240'},${rnd(.03, .09)})`; x.beginPath(); x.arc(rnd(0, s), rnd(0, s), rnd(8, 46), 0, 7); x.fill(); }
+  for (let i = 0; i < 12; i++) {
+    x.strokeStyle = `rgba(110,100,90,${rnd(.12, .3)})`; x.lineWidth = rnd(.5, 1.6);
+    x.beginPath(); let px = rnd(0, s), py = rnd(0, s); x.moveTo(px, py); for (let k = 0; k < 9; k++) { px += rnd(-30, 30); py += rnd(-20, 20); x.lineTo(px, py); } x.stroke();
+  }
+  for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(64,56,46,${rnd(.03, .09)})`; x.fillRect(rnd(0, s), rnd(-20, s), rnd(1, 4), rnd(20, 90)); } // rain streaks
+  for (let i = 0; i < 2200; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '60,55,50' : '255,255,255'},${rnd(.04, .14)})`; x.fillRect(rnd(0, s), rnd(0, s), rnd(1, 2.5), rnd(1, 2.5)); }
+  for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(70,80,52,${rnd(.08, .2)})`; x.beginPath(); x.arc(rnd(0, s), rnd(0, s), rnd(2, 9), 0, 7); x.fill(); } // lichen
+});
+const stoneMap = tex(stoneC), stoneBump = tex(stoneC, 1, false);
+const flameTex = tex(noiseCanvas(64, (x, s, h) => {
+  const g = x.createRadialGradient(s / 2, h * .72, 1, s / 2, h * .6, s * .5);
+  g.addColorStop(0, 'rgba(255,250,215,1)'); g.addColorStop(.25, 'rgba(255,196,90,.95)'); g.addColorStop(.55, 'rgba(255,110,30,.5)'); g.addColorStop(1, 'rgba(160,30,0,0)');
+  x.fillStyle = g; x.beginPath(); x.moveTo(s / 2, 0); x.bezierCurveTo(s * .95, h * .45, s * .95, h, s / 2, h); x.bezierCurveTo(s * .05, h, s * .05, h * .45, s / 2, 0); x.fill();
+}, 128), 1);
+flameTex.wrapS = flameTex.wrapT = THREE.ClampToEdgeWrapping;
 const treadTex = tex(noiseCanvas(64, (x, s) => { x.fillStyle = '#16181b'; x.fillRect(0, 0, s, s); x.fillStyle = '#2d3035'; for (let i = 0; i < s; i += 16) x.fillRect(0, i, s, 8); x.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < s; i += 16) x.fillRect(0, i, s, 1); }));
 
 // ---------------------------------------------------------------- sky: night at the bottom, sunrise at the top
@@ -278,38 +297,64 @@ function rangeRing(radius, n, hMin, hMax, base, seed, col, colHi) {
 }
 far.add(rangeRing(700, 70, 40, 170, -120, 11, 0x1a1d22, 0x2a2e36));
 far.add(rangeRing(1300, 90, 120, 330, -160, 23, 0x161a22, 0x2a3140));
-const summit = (() => { // the summit massif: always ahead, never closer
-  const g = new THREE.ConeGeometry(700, 1150, 40, 14), p = g.attributes.position, cols = [], tc = new THREE.Color(), hi = new THREE.Color(0x8e98a8), lo = new THREE.Color(0x141820);
-  const v = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i);
-    const t = (v.y + 575) / 1150, th = Math.atan2(v.z, v.x);
-    if (t < .99) {
-      const ridge = 1 + .28 * Math.sin(3 * th + .6) + .16 * Math.sin(7 * th + 2) + .08 * Math.sin(13 * th) + rnd(-.05, .05);
-      v.x *= ridge; v.z *= ridge; v.y += Math.sin(th * 5 + t * 9) * 40 * (1 - t);
-      v.x += 120 * t * t; // a slightly hooked peak
-    }
-    p.setXYZ(i, v.x, v.y, v.z);
-    const sn = smooth(.45, .72, t + .08 * Math.sin(th * 9)) * (.75 + .25 * Math.sin(th * 3 + 1));
-    tc.copy(lo).lerp(hi, sn); cols.push(tc.r, tc.g, tc.b);
+// The mountain you are on. A long ridge starts just ahead of you (its foot always level with where you
+// are) and climbs all the way to the summit, so the peak reads as the top of YOUR mountain, not an island
+// across the cloud sea. Lower slopes sink into haze and cloud; the high ridge and the peak stand clear.
+const summit = (() => {
+  const A = [-30, -330], B = [-160, -2500], PEAK = 1380, X0 = -1700, X1 = 1300, Z0 = -3500, Z1 = -260, NX = 120, NZ = 150;
+  const abx = B[0] - A[0], abz = B[1] - A[1], L2 = abx * abx + abz * abz;
+  const hash = (i, j) => { const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return h - Math.floor(h); };
+  const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), u = x - i, v = z - j, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+    return lerp(lerp(hash(i, j), hash(i + 1, j), su), lerp(hash(i, j + 1), hash(i + 1, j + 1), su), sv); };
+  const ridged = (x, z) => { let a = 0, amp = 1, f = 1; for (let o = 0; o < 5; o++) { a += (1 - Math.abs(vn(x * f, z * f) * 2 - 1)) * amp; amp *= .5; f *= 2.03; } return a / 1.94; };
+  const shape = (x, z) => { // returns [height without your altitude, how much of your altitude to add]
+    const t = clamp(((x - A[0]) * abx + (z - A[1]) * abz) / L2, 0, 1), px = A[0] + abx * t, pz = A[1] + abz * t;
+    const e = Math.hypot(x - px, z - pz), f = Math.pow(t, 2.3), w = lerp(.9, 2.2, Math.sqrt(t));
+    let y = -10 * (1 - f) + PEAK * f - (e / w) * .75 - (e / w) * (e / w) / 900;
+    y += (ridged(x / 240, z / 240) - .55) * lerp(50, 210, t) * smooth(0, 120, e + 60);                   // buttresses and gullies
+    y += 170 * Math.exp(-((x - B[0] - 70) ** 2 + (z - B[1] + 40) ** 2) / (150 * 150));                   // the horn of the summit
+    return [Math.max(y, -420), 1 - f];
+  };
+  const pos = [], aw = [], cols = [], idx = [], tc = new THREE.Color(), lo = new THREE.Color(0x14171d), mid = new THREE.Color(0x30353e), hi = new THREE.Color(0xa6afbd);
+  for (let j = 0; j <= NZ; j++) for (let i = 0; i <= NX; i++) {
+    const x = X0 + (X1 - X0) * i / NX, z = Z0 + (Z1 - Z0) * Math.pow(j / NZ, .8);
+    const [y, w] = shape(x, z), yw = y + 150 * w;                       // colour as if you were ~180 m up
+    pos.push(x, y, z); aw.push(w);
+    const snow = smooth(520, 860, yw + (ridged(x / 90, z / 90) - .5) * 160), rock = smooth(-100, 300, yw);
+    tc.copy(lo).lerp(mid, rock).lerp(hi, snow * .9); cols.push(tc.r, tc.g, tc.b);
   }
-  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals();
-  const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false }));
-  m.frustumCulled = false; far.add(m);
-  const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .55, .25).multiplyScalar(2.5), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  beacon.scale.set(36, 36, 1); beacon.position.set(120, 578, 0); m.add(beacon); m.userData.beacon = beacon;
+  for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  g.setAttribute('aw', new THREE.Float32BufferAttribute(aw, 1)); g.setIndex(idx); g.computeVertexNormals();
+  const uni = { uAlt: { value: 0 }, hazeCol: { value: new THREE.Color() }, hazeMin: { value: 0 } };
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, uni);
+    sh.vertexShader = 'attribute float aw; uniform float uAlt; varying float vHaze;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      `#include <begin_vertex>
+      transformed.y += uAlt * aw;
+      float hd = length(position.xz);
+      vHaze = max(.14 + .3 * smoothstep(600., 3400., hd), (1. - smoothstep(uAlt - 40., uAlt + 380., transformed.y)) * .74);`);
+    sh.fragmentShader = 'uniform vec3 hazeCol; uniform float hazeMin; varying float vHaze;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
+      'gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeCol, max(vHaze, hazeMin));\n#include <dithering_fragment>');
+  };
+  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; far.add(m); m.userData.uni = uni;
+  const top = shape(B[0] + 70, B[1] - 40)[0];
+  const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .55, .25).multiplyScalar(2.2), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  beacon.scale.set(40, 40, 1); beacon.position.set(B[0] + 70, top + 14, B[1] - 40); m.add(beacon); m.userData.beacon = beacon;
   return m;
 })();
-// the lab you started from: lights far down in the valley that shrink away as you climb
+// a village far down in the valley: warm firelight that shrinks away as you climb
 {
-  const n = 420, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), R = mulberry(5), c = new THREE.Color();
+  const n = 170, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), R = mulberry(5), c = new THREE.Color();
   for (let i = 0; i < n; i++) {
     const cl = R() < .7, cx = cl ? 260 : 480, cz = cl ? 120 : -260, sp = cl ? 120 : 220;
     pos[i * 3] = cx + (R() - .5) * sp * 2; pos[i * 3 + 1] = -128 + R() * 4; pos[i * 3 + 2] = cz + (R() - .5) * sp * 2;
-    c.set(R() < .6 ? 0xffc27a : R() < .5 ? 0x7fe8ff : 0xff6fb4).multiplyScalar(.8 + R() * .6); col.set([c.r, c.g, c.b], i * 3);
+    c.set(R() < .7 ? 0xffb066 : 0xff8a3a).multiplyScalar(.5 + R() * .5); col.set([c.r, c.g, c.b], i * 3);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const town = new THREE.Points(g, new THREE.PointsMaterial({ size: 3.2, map: glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  const town = new THREE.Points(g, new THREE.PointsMaterial({ size: 2.2, map: glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
   town.frustumCulled = false; scene.add(town);
 }
 // the cloud sea: only visible from above (from below you just see sky), thick fog while you climb through it
@@ -388,11 +433,17 @@ const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: GT.m
 groundMat.map.repeat.set(1 / 5, 1 / 5); groundMat.normalMap.repeat.set(1 / 5, 1 / 5);
 const crevMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0f, roughness: 1, side: THREE.DoubleSide });
 const lipMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .5, .25).multiplyScalar(1.15) });
-const abyssMat = new THREE.MeshBasicMaterial({ map: glowTex, color: new THREE.Color(1, .3, .1).multiplyScalar(.22), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+const abyssMat = new THREE.MeshBasicMaterial({ map: glowTex, color: new THREE.Color(.55, .62, .75).multiplyScalar(.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
 const decoRockMat = new THREE.MeshStandardMaterial({ color: 0x77787c, map: groundMap, bumpMap: groundBump, bumpScale: 1.2, roughness: .95, flatShading: true });
 const pineMat = new THREE.MeshStandardMaterial({ color: 0x223024, roughness: .95, flatShading: true });
 const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3a2d22, roughness: 1 });
 const hazardMat = new THREE.MeshStandardMaterial({ map: hazardTex, roughness: .6 });
+const marbleStoneMat = new THREE.MeshStandardMaterial({ color: 0xe6ded0, map: stoneMap, bumpMap: stoneBump, bumpScale: .9, roughness: .74 });
+const oldStoneMat = new THREE.MeshStandardMaterial({ color: 0x9c958b, map: stoneMap, bumpMap: stoneBump, bumpScale: 1.4, roughness: .92 });
+const bronzeMat = new THREE.MeshStandardMaterial({ color: 0xb98042, metalness: .9, roughness: .4, envMapIntensity: 1.4 });
+const rampRockMat = new THREE.MeshStandardMaterial({ color: 0x8a8580, map: groundMap, bumpMap: groundBump, bumpScale: 1.4, roughness: .95, flatShading: true, side: THREE.DoubleSide });
+const flameMats = [0, 1].map(i => new THREE.SpriteMaterial({ map: flameTex, color: i ? 0xff7a2a : 0xffd28a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+const fireGlowMat = new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .45, .15).multiplyScalar(.55), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
 function rockGeo(r, R) {
   const g = new THREE.IcosahedronGeometry(r, 1), p = g.attributes.position, map = new Map();
   for (let i = 0; i < p.count; i++) {
@@ -406,7 +457,48 @@ function rockGeo(r, R) {
 const ROCKS = (() => { const R = mulberry(77), out = []; for (let i = 0; i < 8; i++) out.push(rockGeo(1, R)); return out; })();
 const PINE = [new THREE.ConeGeometry(1, 2.4, 7), new THREE.ConeGeometry(.75, 1.8, 7), new THREE.CylinderGeometry(.12, .16, 1, 5)];
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
-const SHARED_GEOS = new Set([...ROCKS, ...PINE, UNIT_BOX]);
+// a Doric column shaft (radius .55, 7.6 tall) with 20 flutes and a slight taper
+const COL_SHAFT = (() => {
+  const g = new THREE.CylinderGeometry(.5, .56, 7.6, 120, 6), p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); const r = Math.hypot(v.x, v.z); if (r < .01) continue;
+    const a = Math.atan2(v.z, v.x), f = 1 - .07 * Math.pow(.5 + .5 * Math.cos(a * 20), 1.5);
+    p.setXYZ(i, v.x * f, v.y, v.z * f);
+  }
+  g.computeVertexNormals(); return g;
+})();
+const COL_CAP = new THREE.CylinderGeometry(.78, .5, .42, 32);
+// a block of rough-dressed stone: a box with chipped, uneven faces (unit size, scale it)
+const BLOCK_GEO = (() => {
+  const g = new THREE.BoxGeometry(1, 1, 1, 8, 6, 3), p = g.attributes.position, R = mulberry(41), m = new Map(), v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); const k = v.toArray().map(n => n.toFixed(3)).join();
+    if (!m.has(k)) m.set(k, [R() - .5, R() - .5, R() - .5]);
+    const o = m.get(k), edge = (Math.abs(v.x) > .49) + (Math.abs(v.y) > .49) + (Math.abs(v.z) > .49);
+    const f = edge >= 2 ? .05 : .018; p.setXYZ(i, v.x * (1 - (edge >= 2 ? .03 : 0)) + o[0] * f, v.y + o[1] * f, v.z + o[2] * f);
+  }
+  g.computeVertexNormals(); return g;
+})();
+const SHARED_GEOS = new Set([...ROCKS, ...PINE, UNIT_BOX, COL_SHAFT, COL_CAP, BLOCK_GEO]);
+const flames = [];
+// a bronze fire-bowl on a stone pedestal; the flames flicker (sprites only: no new lights, ever)
+function brazier(scale = 1) {
+  const b = new THREE.Group();
+  const ped = new THREE.Mesh(BLOCK_GEO, oldStoneMat); ped.scale.set(.8, 1.1, .8); ped.position.y = .55; ped.castShadow = true; b.add(ped);
+  const bowl = new THREE.Mesh(COL_CAP, bronzeMat); bowl.scale.set(.8, .9, .8); bowl.position.y = 1.3; b.add(bowl);
+  const f = new THREE.Group(); f.position.y = 1.45; b.add(f);
+  const s0 = new THREE.Sprite(flameMats[1]); s0.scale.set(1.3, 2.1, 1); s0.position.y = .8; f.add(s0);
+  const s1 = new THREE.Sprite(flameMats[0]); s1.scale.set(.8, 1.4, 1); s1.position.y = .55; f.add(s1);
+  const gl = new THREE.Sprite(fireGlowMat); gl.scale.setScalar(4.5); gl.position.y = .5; f.add(gl);
+  f.userData = { s0, s1, ph: Math.random() * 9 }; flames.push(f);
+  b.scale.setScalar(scale); return b;
+}
+function cairn(x, y, z, R) {
+  const c = new THREE.Group(); let h = 0;
+  for (const r of [.55, .42, .32, .2]) { const m = new THREE.Mesh(ROCKS[(R() * 8) | 0], decoRockMat); m.scale.set(r, r * .55, r); h += r * .45; m.position.y = h; h += r * .3; m.rotation.y = R() * 6; c.add(m); }
+  c.position.set(x, y, z); return c;
+}
+const ROMAN = n => { let o = ''; for (const [v, r] of [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (n >= v) { o += r; n -= v; } return o; };
 function pine(h) {
   const t = new THREE.Group();
   const a = new THREE.Mesh(PINE[0], pineMat); a.position.y = 1.6; t.add(a);
@@ -500,38 +592,56 @@ function buildChunk(c) {
     for (const ld of [g.d0, g.d1]) {
       const xs = rowPoints(ld).filter(x => Math.abs(x - xc(ld)) < hwAt(ld) + 16);
       grp.add(ribbon(xs.map(x => [[x, G(ld, x) - 18, -ld], [x, G(ld, x), -ld]]), crevMat));
-      const lip = new THREE.Mesh(new THREE.BoxGeometry(hwAt(ld) * 2 - .4, .06, .12), lipMat);
-      lip.position.set(xc(ld), G(ld, xc(ld)) + .05, -ld + (ld === g.d0 ? -.06 : .06)); grp.add(lip);
-      if (ld === g.d0) for (const sd of [-1, 1]) {
-        const bx = xc(ld) + sd * (hwAt(ld) + .4), by = G(ld, bx);
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, 1.6, 10), hazardMat); post.position.set(bx, by + .8, -ld + .4); grp.add(post);
-        const lamp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff8a3a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-        lamp.scale.setScalar(1.6); lamp.position.set(bx, by + 1.75, -ld + .4); grp.add(lamp); blinkers.push(lamp);
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(.14, 8, 6), lipMat); bulb.position.copy(lamp.position); grp.add(bulb);
-      }
+      if (ld === g.d0) for (const sd of [-1, 1]) { const bx = xc(ld) + sd * (hwAt(ld) + .7); grp.add(cairn(bx, G(ld, bx) - .05, -ld + .6, R)); }
     }
-    { // the plank bridge: a steel deck with rails
-      const bw = g.b1 - g.b0, cx = xc(mid) + (g.b0 + g.b1) / 2, len = g.d1 - g.d0 + 1.4;
+    { // the bridge: one great slab of old marble laid across, a fallen column along its outer edge
+      const bw = g.b1 - g.b0, cx = xc(mid) + (g.b0 + g.b1) / 2, len = g.d1 - g.d0 + 2.4, outer = Math.sign(g.b0 + g.b1);
       const y0 = G(g.d0, cx), y1 = G(g.d1, cx), ang = Math.atan2(y1 - y0, g.d1 - g.d0), my = (y0 + y1) / 2 + .02;
       const br = new THREE.Group(); br.position.set(cx, my, -mid); br.rotation.x = ang; grp.add(br);
-      const deck = boxMesh(bw, .26, len, slabMat); deck.receiveShadow = true; deck.castShadow = true; br.add(deck);
-      for (const e of [-1, 1]) {
-        const strip = boxMesh(.25, .04, len, hazardMat); strip.position.set(e * (bw / 2 - .13), .15, 0); br.add(strip);
-        const rail = boxMesh(.08, .08, len, slabMat); rail.position.set(e * (bw / 2 - .05), 1.0, 0); br.add(rail);
-        for (const z of [-len / 2 + .2, 0, len / 2 - .2]) { const post = boxMesh(.1, 1, .1, slabMat); post.position.set(e * (bw / 2 - .05), .55, z); br.add(post); }
-        const tube = boxMesh(.04, .04, len * .9, neonMat(0x7fe8ff)); tube.position.set(e * (bw / 2 - .05), 1.06, 0); br.add(tube);
+      const slab = new THREE.Mesh(BLOCK_GEO, marbleStoneMat); slab.scale.set(bw + .3, .7, len); slab.position.y = -.22; slab.receiveShadow = true; slab.castShadow = true; br.add(slab);
+      const col = new THREE.Mesh(COL_SHAFT, marbleStoneMat); col.rotation.x = Math.PI / 2; col.scale.set(.72, Math.min(1.2, (len - .6) / 7.6), .72);
+      col.position.set(outer * (bw / 2 + .15), .36, 0); col.castShadow = true; br.add(col);
+      for (const e of [-1, 1]) { // stone footings and rubble at both lips
+        for (let i = 0; i < 3; i++) { const r = .45 + R() * .5, rk = new THREE.Mesh(ROCKS[(R() * 8) | 0], decoRockMat); rk.scale.setScalar(r); rk.position.set((R() - .5) * bw, -.5, e * (len / 2 - .2 + R() * .6)); br.add(rk); }
       }
-      const beam = boxMesh(.3, .5, len, slabMat); beam.position.set(0, -.35, 0); br.add(beam);
     }
-    { // the launch ramp: a steel wedge rising to the near lip
-      const rw = g.r1 - g.r0, cx = xc(g.d0 - RAMP_L / 2) + (g.r0 + g.r1) / 2, ys = G(g.d0 - RAMP_L, cx), ye = G(g.d0, cx) + RAMP_H;
-      const ang = Math.atan2(ye - ys, RAMP_L), l = Math.hypot(RAMP_L, ye - ys);
-      const rp = new THREE.Group(); rp.position.set(cx, (ys + ye) / 2 - .08, -(g.d0 - RAMP_L / 2)); rp.rotation.x = ang; grp.add(rp);
-      const plate = boxMesh(rw, .18, l, slabMat); plate.receiveShadow = true; plate.castShadow = true; rp.add(plate);
-      for (let i = 0; i < 4; i++) { const ch = boxMesh(rw * .9, .02, .3, hazardMat); ch.position.set(0, .1, -l / 2 + .6 + i * (l - 1.2) / 3); rp.add(ch); }
-      const lipT = boxMesh(rw, .06, .06, neonMat(0xffb43a)); lipT.position.set(0, .12, -l / 2 + .03); rp.add(lipT);
-      const wall = boxMesh(rw, RAMP_H + .3, .3, slabMat); wall.position.set(cx, G(g.d0, cx) + RAMP_H / 2 - .1, -g.d0 + .15); grp.add(wall);
-      for (const e of [-1, 1]) { const side = boxMesh(.12, .7, RAMP_L * .9, hazardMat); side.position.set(cx + e * (rw / 2), (ys + ye) / 2 - .3, -(g.d0 - RAMP_L / 2)); side.rotation.x = ang; grp.add(side); }
+    { // the launch ramp: a tilted shelf of bedrock rising to the near lip
+      const NI = 6, NK = 9, pos = [], uv = [], idx = [], add = (x, y, z, u, v) => { pos.push(x, y, z); uv.push(u, v); return pos.length / 3 - 1; };
+      const top = [], dS = g.d0 - RAMP_L, rough = (a, b) => .5 + .5 * Math.sin(a * 12.9898 + b * 78.233 + g.d0) * Math.cos(a * 4.1 + b * 7.7);
+      for (let k = 0; k <= NK; k++) {
+        const d = dS + RAMP_L * k / NK, rise = RAMP_H * k / NK, row = [];
+        for (let i = 0; i <= NI; i++) {
+          const off = g.r0 + (g.r1 - g.r0) * i / NI, x = xc(d) + off;
+          row.push(add(x, G(d, x) + rise - .05 + (i % NI ? rough(i, k) * .05 : 0), -d, x / 3, d / 3));
+        }
+        top.push(row);
+      }
+      for (let k = 0; k < NK; k++) for (let i = 0; i < NI; i++) { const a = top[k][i], b = top[k][i + 1], c = top[k + 1][i], e = top[k + 1][i + 1]; idx.push(a, b, c, b, e, c); }
+      for (const side of [0, NI]) { // rocky flanks that bulge out and down to the road
+        const sg = side ? 1 : -1, mids = [], bots = [];
+        for (let k = 0; k <= NK; k++) {
+          const d = dS + RAMP_L * k / NK, rise = RAMP_H * k / NK, off = side ? g.r1 : g.r0, bul = .35 + rough(k, side) * .45;
+          const xm = xc(d) + off + sg * bul, xb = xc(d) + off + sg * (bul + .5 + rise * .35);
+          mids.push(add(xm, G(d, xm) + rise * .55, -d, d / 3, (rise * .55) / 3)); bots.push(add(xb, G(d, xb) - .3, -d, d / 3, -.1));
+        }
+        for (let k = 0; k < NK; k++) {
+          const t0 = top[k][side], t1 = top[k + 1][side], m0 = mids[k], m1 = mids[k + 1], b0 = bots[k], b1 = bots[k + 1];
+          if (side) idx.push(t0, t1, m0, m0, t1, m1, m0, m1, b0, b0, m1, b1); else idx.push(t0, m0, t1, t1, m0, m1, m0, b0, m1, m1, b0, b1);
+        }
+      }
+      { // the rock face at the lip, dropping into the crevasse
+        const row = top[NK], low = [];
+        for (let i = 0; i <= NI; i++) { const off = g.r0 + (g.r1 - g.r0) * i / NI, x = xc(g.d0) + off; low.push(add(x + (rough(i, 9) - .5) * .4, G(g.d0, x) - 4, -g.d0 - .15 - rough(i, 3) * .3, x / 3, -1)); }
+        for (let i = 0; i < NI; i++) idx.push(row[i], row[i + 1], low[i], low[i], row[i + 1], low[i + 1]);
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      const ramp = new THREE.Mesh(geo, rampRockMat); ramp.castShadow = true; ramp.receiveShadow = true; grp.add(ramp);
+      for (let i = 0; i < 5; i++) { // loose scree at its foot and flanks
+        const d = dS + R() * RAMP_L * .7, off = (R() < .5 ? g.r0 - .6 - R() * .8 : g.r1 + .6 + R() * .8), x = xc(d) + off, r = .3 + R() * .45;
+        if (Math.abs(off) > hwAt(d) - .3) continue;
+        const rk = new THREE.Mesh(ROCKS[(R() * 8) | 0], decoRockMat); rk.scale.setScalar(r); rk.position.set(x, G(d, x) + r * .2, -d); rk.rotation.set(R() * 3, R() * 3, R() * 3); grp.add(rk);
+      }
     }
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(hwAt(mid) * 2.2, (g.d1 - g.d0) * 1.2), abyssMat);
     glow.rotation.x = -Math.PI / 2; glow.position.set(xc(mid), H(mid) - 12, -mid); grp.add(glow);
@@ -565,23 +675,43 @@ const slabMat = new THREE.MeshStandardMaterial({ color: 0xc4cbd4, map: steelMap,
 const concreteMat = new THREE.MeshStandardMaterial({ color: 0x9a9da3, map: concreteMap, roughness: .9, metalness: 0 });
 const neonMats = new Map();
 const neonMat = col => { if (!neonMats.has(col)) neonMats.set(col, new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(2.2) })); return neonMats.get(col); };
-const CELL = [
-  { col: 0xffb43a, val: 20, y: [1.6, 3], size: 1 },
-  { col: 0x3ef6ff, val: 60, y: [4.5, 7], size: 1.2 },
-  { col: 0xff3fb4, val: 150, y: [7.5, 9.5], size: 1.35 },
+const CELL = [ // coins: bronze obol, silver drachma, gold stater
+  { col: 0xd9925a, val: 20, y: [1.6, 3], size: 1 },
+  { col: 0xe8eef6, val: 60, y: [4.5, 7], size: 1.15 },
+  { col: 0xffcf4a, val: 150, y: [7.5, 9.5], size: 1.35 },
 ];
-const cellGlassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .1, roughness: .05, transparent: true, opacity: .28 });
-const cellCapMat = new THREE.MeshStandardMaterial({ color: 0xb8c0ca, map: steelMap, metalness: .9, roughness: .3 });
-const CELL_GEO = [new THREE.CylinderGeometry(.28, .28, .8, 16), new THREE.CylinderGeometry(.17, .17, .66, 12), new THREE.CylinderGeometry(.31, .31, .13, 16)];
-CELL_GEO.forEach(g => SHARED_GEOS.add(g));
-const haloMats = CELL.map(t => new THREE.SpriteMaterial({ map: glowTex, color: t.col, transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending }));
+const coinFace = tex(noiseCanvas(128, (x, s) => { // an owl struck into the metal, beaded rim
+  x.fillStyle = '#7a7a7a'; x.fillRect(0, 0, s, s);
+  x.fillStyle = '#d8d8d8'; x.beginPath(); x.arc(64, 64, 62, 0, 7); x.fill();
+  x.fillStyle = '#9a9a9a'; x.beginPath(); x.arc(64, 64, 52, 0, 7); x.fill();
+  x.fillStyle = '#e8e8e8'; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283; x.beginPath(); x.arc(64 + Math.cos(a) * 56, 64 + Math.sin(a) * 56, 2.6, 0, 7); x.fill(); }
+  x.fillStyle = '#d0d0d0'; x.beginPath(); x.ellipse(64, 72, 19, 27, 0, 0, 7); x.fill();           // body
+  x.beginPath(); x.ellipse(64, 46, 18, 14, 0, 0, 7); x.fill();                                    // head
+  x.beginPath(); x.moveTo(48, 36); x.lineTo(52, 26); x.lineTo(57, 36); x.fill(); x.beginPath(); x.moveTo(80, 36); x.lineTo(76, 26); x.lineTo(71, 36); x.fill();
+  x.fillStyle = '#f4f4f4'; for (const ex of [57, 71]) { x.beginPath(); x.arc(ex, 46, 6.5, 0, 7); x.fill(); }
+  x.fillStyle = '#6a6a6a'; for (const ex of [57, 71]) { x.beginPath(); x.arc(ex, 46, 2.8, 0, 7); x.fill(); }
+  x.beginPath(); x.moveTo(61, 51); x.lineTo(67, 51); x.lineTo(64, 57); x.fill();
+  x.strokeStyle = '#8a8a8a'; x.lineWidth = 2; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(64, 70 + i * 7, 12 - i * 2, .4, 2.7); x.stroke(); }
+  x.fillStyle = '#bdbdbd'; x.font = 'bold 15px Georgia, serif'; x.textAlign = 'center'; x.fillText('ΑΘΕ', 98, 74);
+}), 1);
+const glintTex = tex(noiseCanvas(64, (x, s) => {
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 8); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s);
+  for (const [w, h] of [[30, 1.6], [1.6, 30]]) { const l = x.createLinearGradient(32 - w, 32 - h, 32 + w, 32 + h); x.fillStyle = 'rgba(255,255,255,.9)'; x.beginPath(); x.ellipse(32, 32, w, h, 0, 0, 7); x.fill(); }
+}), 1);
+const COIN_GEO = new THREE.CylinderGeometry(.42, .42, .085, 36).rotateX(Math.PI / 2);
+const CELL_GEO = [COIN_GEO]; CELL_GEO.forEach(g => SHARED_GEOS.add(g));
+const coinMats = CELL.map(t => {
+  const c = new THREE.Color(t.col);
+  const face = new THREE.MeshStandardMaterial({ color: c, map: coinFace, bumpMap: coinFace, bumpScale: 3, metalness: 1, roughness: .32, envMapIntensity: 2.2, emissive: c.clone().multiplyScalar(.22) });
+  const edge = new THREE.MeshStandardMaterial({ color: c, metalness: 1, roughness: .28, envMapIntensity: 2.2, emissive: c.clone().multiplyScalar(.2) });
+  return [edge, face, face];
+});
+const haloMats = CELL.map(t => new THREE.SpriteMaterial({ map: glintTex, color: t.col, transparent: true, opacity: .9, depthWrite: false, blending: THREE.AdditiveBlending }));
 function makeCell(tier) {
   const t = CELL[tier], g = new THREE.Group();
-  g.add(new THREE.Mesh(CELL_GEO[0], cellGlassMat));
-  g.add(new THREE.Mesh(CELL_GEO[1], neonMat(t.col)));
-  for (const s of [-1, 1]) { const cap = new THREE.Mesh(CELL_GEO[2], cellCapMat); cap.position.y = s * .45; g.add(cap); }
-  const halo = new THREE.Sprite(haloMats[tier]); halo.scale.setScalar(2.2); g.add(halo);
-  g.scale.setScalar(t.size); g.rotation.z = .35;
+  g.add(new THREE.Mesh(COIN_GEO, coinMats[tier]));
+  const glint = new THREE.Sprite(haloMats[tier]); glint.scale.setScalar(1.3); glint.position.set(.18, .18, .1); g.add(glint);
+  g.scale.setScalar(t.size);
   return g;
 }
 function textSprite(text, color, w = 8) {
@@ -595,28 +725,55 @@ function textSprite(text, color, w = 8) {
   s.scale.set(w, w / 4, 1); return s;
 }
 function boxMesh(w, h, dpt, mat) { const m = new THREE.Mesh(UNIT_BOX, mat); m.scale.set(w, h, dpt); return m; }
+function friezeTex(k) {
+  const c = noiseCanvas(1024, (x, w, h) => {
+    x.drawImage(stoneC, 0, 0, 256, 256, 0, 0, w, h);
+    x.fillStyle = 'rgba(255,248,236,.35)'; x.fillRect(0, 0, w, h);
+    const tw = 34, gapW = 70;
+    for (let px = 14; px < w; px += tw + gapW) { // triglyphs
+      if (px > w * .3 && px < w * .7 - tw) continue;
+      x.fillStyle = 'rgba(60,52,44,.4)'; x.fillRect(px, 10, tw, h - 20);
+      x.fillStyle = 'rgba(255,250,240,.5)'; for (const gx of [8, 17, 26]) x.fillRect(px + gx - 2, 14, 2, h - 28);
+    }
+    x.font = '600 86px Georgia, "Times New Roman", serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    const txt = `CAMP ${ROMAN(k)}`;
+    x.fillStyle = 'rgba(255,252,244,.7)'; x.fillText(txt, w / 2 + 2, h / 2 + 4);
+    x.fillStyle = 'rgba(52,44,36,.85)'; x.fillText(txt, w / 2, h / 2 + 1);
+  }, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
 function buildCamp(k) {
   const st = stageDef(k), base = k * CFG.stageLen, d = base + CFG.campLen * .5, cx = xc(d), h = H(d), hw = CFG.hw + 1.3, grp = new THREE.Group();
+  const topY = h + 8.4;
   for (const s of [-1, 1]) {
-    const gy = Math.min(G(d, cx + s * hw), h + 1);
-    const p = boxMesh(1.1, 9, 1.1, concreteMat); p.position.set(cx + s * hw, gy + 4, -d); p.castShadow = true; grp.add(p);
-    const tube = boxMesh(.1, 7, .1, neonMat(st.tint)); tube.position.set(cx + s * (hw - .6), gy + 4.2, -d + .35); grp.add(tube);
+    const x = cx + s * hw, gy = Math.min(G(d, x), h + 1);
+    const step = new THREE.Mesh(BLOCK_GEO, oldStoneMat); step.scale.set(2, 1.2, 2); step.position.set(x, gy - .1, -d); step.castShadow = true; grp.add(step);
+    const sh = new THREE.Mesh(COL_SHAFT, marbleStoneMat), shH = topY - .8 - (gy + .5);
+    sh.scale.set(1.15, shH / 7.6, 1.15); sh.position.set(x, gy + .5 + shH / 2, -d); sh.castShadow = true; grp.add(sh);
+    const cap = new THREE.Mesh(COL_CAP, marbleStoneMat); cap.scale.set(1.15, 1, 1.15); cap.position.set(x, topY - .59, -d); grp.add(cap);
+    const ab = boxMesh(1.85, .4, 1.85, marbleStoneMat); ab.position.set(x, topY - .2, -d); grp.add(ab);
+    const bz = brazier(1.1); bz.position.set(cx + s * (hw + 2.3), G(d, cx + s * (hw + 2.3)) - .1, -d + 1.2); grp.add(bz);
   }
-  const beam = boxMesh(hw * 2 + 1.6, .8, 1, slabMat); beam.position.set(cx, h + 9, -d); beam.castShadow = true; grp.add(beam);
-  const stripe = boxMesh(hw * 2 + 1.62, .2, 1.02, hazardMat); stripe.position.set(cx, h + 8.55, -d); grp.add(stripe);
-  const sign = textSprite(`CAMP ${k}`, '#' + new THREE.Color(st.tint).getHexString(), 9); sign.position.set(cx, h + 10.6, -d); grp.add(sign);
-  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: st.tint, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending }));
-  glow.scale.set(16, 6, 1); glow.position.set(cx, h + 8.3, -d + .8); grp.add(glow);
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(CFG.hw * 2, .25), new THREE.MeshBasicMaterial({ color: new THREE.Color(st.tint).multiplyScalar(1.3), transparent: true, opacity: .8 }));
-  line.rotation.x = -Math.PI / 2; line.position.set(xc(base + 2), H(base + 2) + .06, -(base + 2)); grp.add(line);
+  const W = hw * 2 + 2.4, archMats = [marbleStoneMat, marbleStoneMat, marbleStoneMat, marbleStoneMat, new THREE.MeshStandardMaterial({ map: friezeTex(k), roughness: .8 }), marbleStoneMat];
+  const arch = boxMesh(W, .9, 1.5, marbleStoneMat); arch.position.set(cx, topY + .45, -d); arch.castShadow = true; grp.add(arch);
+  const frieze = new THREE.Mesh(UNIT_BOX, archMats); frieze.scale.set(W - .1, 1.05, 1.35); frieze.position.set(cx, topY + 1.42, -d); grp.add(frieze);
+  const cor = boxMesh(W + .5, .3, 1.8, marbleStoneMat); cor.position.set(cx, topY + 2.08, -d); grp.add(cor);
+  const tri = new THREE.Shape(); tri.moveTo(-W / 2 - .25, 0); tri.lineTo(W / 2 + .25, 0); tri.lineTo(0, 1.9); tri.lineTo(-W / 2 - .25, 0);
+  const ped = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 1.6, bevelEnabled: false }), marbleStoneMat);
+  ped.position.set(cx, topY + 2.23, -d - .8); ped.castShadow = true; grp.add(ped);
+  { // a threshold of worn marble paving across the road
+    const td = base + 2, tc = xc(td), y0 = G(td, tc - CFG.hw), y1 = G(td, tc + CFG.hw);
+    const slab = new THREE.Mesh(BLOCK_GEO, marbleStoneMat); slab.scale.set(CFG.hw * 2 + .6, .22, 1.3);
+    slab.position.set(tc, G(td, tc) + .02, -td); slab.rotation.z = Math.atan2(y1 - y0, CFG.hw * 2); slab.receiveShadow = true; grp.add(slab);
+  }
   scene.add(grp);
   return { k, d: base + 2, mesh: grp, reached: false, st };
 }
-function buildGate(w, hgt) {
+function buildGate(w, hgt) { // a great block of grey stone that grinds back and forth across the road, bound in bronze
   const grp = new THREE.Group();
-  const body = boxMesh(w, hgt, .9, slabMat); body.castShadow = true; grp.add(body);
-  const stripe = boxMesh(w + .02, .4, .92, hazardMat); stripe.position.y = -hgt / 2 + .35; grp.add(stripe);
-  const tube = boxMesh(w * .8, .08, .06, neonMat(0xff4f5a)); tube.position.set(0, hgt / 2 - .3, .47); grp.add(tube);
+  const body = new THREE.Mesh(BLOCK_GEO, oldStoneMat); body.scale.set(w, hgt, .9); body.castShadow = true; body.receiveShadow = true; grp.add(body);
+  for (const e of [-.3, .3]) { const strap = boxMesh(.26, hgt + .05, .98, bronzeMat); strap.position.x = e * w; grp.add(strap); }
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.26, .06, 8, 20), bronzeMat); ring.position.set(0, hgt * .1, .5); grp.add(ring);
   return grp;
 }
 function buildStage(k) {
@@ -672,14 +829,14 @@ const ball = (() => {
   const uv = new Float32Array(p.count * 2);
   for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); uv[i * 2] = .5 + Math.atan2(v.z, v.x) / (2 * Math.PI); uv[i * 2 + 1] = .5 + Math.asin(v.y) / Math.PI; }
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  const em = noiseCanvas(256, (x, s) => { x.fillStyle = '#000'; x.fillRect(0, 0, s, s); x.fillStyle = '#ff9a4a'; x.fillRect(0, s / 2 - 2, s, 4); });
+  const em = noiseCanvas(256, (x, s) => {
+    x.fillStyle = '#000'; x.fillRect(0, 0, s, s); x.strokeStyle = '#ff9a4a'; x.lineCap = 'round';
+    for (let i = 0; i < 16; i++) { x.lineWidth = rnd(.8, 2.4); x.beginPath(); let px = rnd(0, s), py = rnd(s * .15, s * .85); x.moveTo(px, py); for (let k = 0; k < 7; k++) { px += rnd(-22, 22); py += rnd(-14, 14); x.lineTo(px, py); } x.stroke(); }
+  });
   const map = tex(rockC); map.repeat.set(2, 1);
   const mat = new THREE.MeshStandardMaterial({ color: 0x9c9890, map, bumpMap: groundBump, bumpScale: 2.4, roughness: .9, metalness: .02,
     emissive: new THREE.Color(1, .55, .25), emissiveMap: new THREE.CanvasTexture(em), emissiveIntensity: .3 });
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
-  const bandMat = new THREE.MeshStandardMaterial({ color: 0xc0c8d2, map: steelMap, metalness: .9, roughness: .3 });
-  const band = new THREE.Mesh(new THREE.TorusGeometry(R0 * 1.02, .1, 8, 72), bandMat); mesh.add(band);
-  const band2 = new THREE.Mesh(new THREE.TorusGeometry(R0 * 1.02, .1, 8, 72), bandMat); band2.rotation.y = Math.PI / 2; mesh.add(band2);
   const group = new THREE.Group(); group.add(mesh); scene.add(group);
   const marker = new THREE.Mesh(new THREE.RingGeometry(.88, 1, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .7, .35).multiplyScalar(1.4), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
   scene.add(marker);
@@ -1074,16 +1231,16 @@ const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} 
 
 // ---------------------------------------------------------------- perks (advantages earned at camps)
 const PERKS = {
-  power:    { name: 'Heavy Hammer', desc: 'Strikes hit 15% harder.', max: 3, ic: '⚒', col: '#ff8a3a', chip: 'POWER' },
+  power:    { name: 'Heavy Fist', desc: 'Punches hit 15% harder.', max: 3, ic: '⚒', col: '#ff8a3a', chip: 'POWER' },
   reach:    { name: 'Long Arm', desc: 'Bigger strike range.', max: 3, ic: '◎', col: '#3ef6ff', chip: 'REACH' },
   quick:    { name: 'Quick Wind-up', desc: 'Charge up 35% faster.', max: 2, ic: '»', col: '#ffc23a', chip: 'QUICK' },
   arc:      { name: 'Foresight', desc: 'See where your throw will land while winding up.', max: 1, ic: '⌒', col: '#9fe870', chip: 'ARC' },
   focus:    { name: 'Focus', desc: 'Time slows while you wind up near the boulder.', max: 1, ic: '◔', col: '#a77bff', chip: 'FOCUS' },
-  shield:   { name: 'Armour Plating', desc: 'Shrug off one hit per stage from rocks or doors.', max: 1, ic: '⛨', col: '#c9d2de', chip: 'ARMOUR' },
+  shield:   { name: 'Bronze Armour', desc: 'Shrug off one hit per stage from rocks or stone blocks.', max: 1, ic: '⛨', col: '#c9d2de', chip: 'ARMOUR' },
   backstop: { name: 'Backstop', desc: 'Once per stage, catch a boulder that gets past you.', max: 1, ic: '↺', col: '#ff3fb4', chip: 'SAVE' },
   spare:    { name: 'Spare Boulder', desc: '+1 boulder now and +1 max.', max: 2, ic: '●', col: '#ff8a3a', chip: 'SPARE' },
-  magnet:   { name: 'Lodestone', desc: 'Energy cells drift toward the boulder.', max: 1, ic: 'Ʊ', col: '#3ef6ff', chip: 'MAGNET' },
-  steady:   { name: 'Better Tracks', desc: 'Faster steering. Bumps don\'t break your combo.', max: 1, ic: '≡', col: '#9fe870', chip: 'TRACKS' },
+  magnet:   { name: 'Lodestone', desc: 'Coins drift toward the boulder.', max: 1, ic: 'Ʊ', col: '#3ef6ff', chip: 'MAGNET' },
+  steady:   { name: 'Sure Footing', desc: 'Faster steering. Bumps don\'t break your combo.', max: 1, ic: '≡', col: '#9fe870', chip: 'TRACKS' },
 };
 const perkLv = () => Object.fromEntries(Object.keys(PERKS).map(k => [k, 0]));
 let perkChoices = null;
@@ -1492,7 +1649,7 @@ function update(dt) {
       if (S.perks.shield) S.shieldReady = true;
       if (S.perks.backstop) S.backstopReady = true;
       sfx.camp(); buzz([20, 40, 20, 40, 60]);
-      dustAt.copy(P.p).setY(P.p.y + 4); burst(dustAt, 50, c.st.tint, 10, new THREE.Vector3(0, 1, 0), 6, [.6, 1.4]);
+      dustAt.copy(P.p).setY(P.p.y + 4); burst(dustAt, 40, 0xffc870, 9, new THREE.Vector3(0, 1, 0), 9, [.5, 1.1]);
       const next = stageDef(c.k);
       banner(`CAMP ${c.k} · ${next.name.toUpperCase()}`, next.note);
       pop(`+${bonus * S.mult}`, P.p.clone().setY(P.p.y + 5), 'big');
@@ -1589,7 +1746,7 @@ function render(dt, t) {
   if (showArc) predictArc();
   ball.group.position.copy(ball.p);
   ball.heat = Math.max(0, ball.heat - dt * .9);
-  ball.mat.emissiveIntensity = .25 + ball.heat * 2;
+  ball.mat.emissiveIntensity = ball.heat * 2.4;
   const bd = -ball.p.z, gh = openGap(bd, ball.p.x) ? H(bd) - 12 : G(bd, ball.p.x);
   const above = ball.p.y - ball.r - gh;
   ball.marker.position.set(ball.p.x, gh + .08, ball.p.z);
@@ -1629,7 +1786,7 @@ function render(dt, t) {
   skyUni.horizon.value.copy(NIGHT_HOR).lerp(DAWN_HOR, dawn);
   skyUni.dawn.value = dawn;
   skyGroup.position.copy(camera.position);
-  skyUni.sunDir.value.set(-.45, lerp(-.08, .16, dawn), -1).normalize();
+  skyUni.sunDir.value.set(.62, lerp(-.08, .16, dawn), -1).normalize();
   sunDisc.position.copy(skyUni.sunDir.value).multiplyScalar(2600);
   sunDisc.material.opacity = smooth(.1, .4, dawn);
   stars.material.opacity = .8 * (1 - smooth(.2, .75, dawn));
@@ -1638,9 +1795,8 @@ function render(dt, t) {
   sun.target.position.set(camera.position.x, camera.position.y - 5, camera.position.z - 16);
   hemi.color.copy(HEMI_NIGHT).lerp(HEMI_DAWN, dawn * .6); hemi.intensity = .75 + dawn * .35;
   far.position.set(camera.position.x, 0, camera.position.z);
-  summit.position.set(700, 330, -2600);
-  summit.material.emissive.copy(skyUni.horizon.value).multiplyScalar(.42 + dawn * .2);
-  summit.userData.beacon.material.opacity = .6 + Math.sin(t * 1.3) * .4;
+  summit.material.emissive.copy(skyUni.horizon.value).multiplyScalar(.16 + dawn * .14);
+  summit.userData.beacon.material.opacity = .75 + Math.sin(t * 7.3) * .08 + Math.sin(t * 11.1) * .06;
   farMat.emissive.copy(skyUni.horizon.value).multiplyScalar(.12 + dawn * .1);
   const cloudNear = 1 - smooth(6, 26, Math.abs(alt - CFG.cloudY));   // in the cloud layer
   // once you're through the clouds they stay a little below you: a sea of cloud to the right of the road
@@ -1653,7 +1809,14 @@ function render(dt, t) {
   });
   fogCol.copy(skyUni.horizon.value).lerp(HAZE, .55 + dawn * .15).multiplyScalar(.75 + dawn * .2).lerp(clouds[0].material.color, cloudNear * .8);
   scene.fog.color.copy(fogCol);
+  { const u = summit.userData.uni; u.uAlt.value = alt; u.hazeCol.value.copy(fogCol); u.hazeMin.value = cloudNear * .97; }
   scene.fog.near = lerp(30, 4, cloudNear); scene.fog.far = lerp(190 + dawn * 120, 55, cloudNear);
+  for (let i = flames.length - 1; i >= 0; i--) {
+    const f = flames[i]; if (!f.parent || !f.parent.parent || !f.parent.parent.parent) { flames.splice(i, 1); continue; }
+    const u = f.userData, n = Math.sin(t * 13 + u.ph) * .5 + Math.sin(t * 23.7 + u.ph * 2) * .3 + Math.sin(t * 5.1 + u.ph) * .2;
+    u.s0.scale.set(1.3 + n * .12, 2.1 + n * .35, 1); u.s1.scale.set(.8 - n * .06, 1.4 + n * .25, 1); u.s0.position.x = n * .05;
+  }
+  haloMats.forEach((m, i) => { m.opacity = .35 + .65 * Math.pow(.5 + .5 * Math.sin(t * 3.1 + i * 2), 4); m.rotation = t * .6; });
   const blink = (Math.sin(t * 6) > 0) ? 1 : .15;
   for (let i = blinkers.length - 1; i >= 0; i--) { const b = blinkers[i]; if (!b.parent || !b.parent.parent) { blinkers.splice(i, 1); continue; } b.material.opacity = blink; }
   const sAmt = smooth(110, 200, alt);
@@ -1687,7 +1850,8 @@ resize(); resetWorld();
   const add = o => { o.position.set(P.p.x + rnd(-3, 3), P.p.y + 2, P.p.z - 14); warm.add(o); };
   CELL.forEach((_, i) => add(makeCell(i)));
   add(buildGate(4, 3)); add(new THREE.Mesh(ROCKS[0], boulderMat)); add(new THREE.Mesh(ROCKS[1], tumbleMat)); add(pine(1));
-  for (const m of [hazardMat, concreteMat, crevMat, lipMat, slabMat, abyssMat]) add(new THREE.Mesh(UNIT_BOX, m));
+  for (const m of [hazardMat, concreteMat, crevMat, lipMat, slabMat, abyssMat, marbleStoneMat, oldStoneMat, bronzeMat, rampRockMat]) add(new THREE.Mesh(UNIT_BOX, m));
+  add(brazier()); add(new THREE.Mesh(UNIT_BOX, [marbleStoneMat, marbleStoneMat, marbleStoneMat, marbleStoneMat, new THREE.MeshStandardMaterial({ map: friezeTex(1), roughness: .8 }), marbleStoneMat])); add(cairn(0, 0, 0, Math.random));
   add(new THREE.Mesh(RING_GEO, newRingMat())); add(textSprite('CAMP', '#3ef6ff')); add(new THREE.Sprite(dustSpriteMat));
   for (const c of [0x3ef6ff, 0xffb43a, 0xff4fa0, 0x7dff6a, 0xa77bff, 0xff4f5a]) add(new THREE.Mesh(UNIT_BOX, neonMat(c)));
   warm.traverse(o => { if (o.isMesh) o.castShadow = true; });

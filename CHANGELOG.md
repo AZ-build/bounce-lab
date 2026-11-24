@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [Summit v7 "The Old Road"] - 2026-11-23
+- Everything on the mountain now belongs to ancient Greece instead of a lab:
+  - Camps are marble gateways: two fluted Doric columns, a lintel carved with the camp number in Roman numerals, a pediment on top, a bronze fire-bowl burning beside each one, and a worn marble threshold across the road
+  - The sliding blast doors are now great blocks of grey stone bound in bronze that grind across the road (stage renamed "The Clashing Rocks")
+  - Glowing energy cells are now spinning coins with an owl stamped on them: bronze, silver and gold, with a small glint
+  - Crevasse bridges are a single slab of old marble with a fallen column along the edge; the launch ramps are tilted shelves of bedrock with scree at the foot. The hazard stripes, steel, neon tubes and blinking lamps are gone; stone cairns mark the edge
+  - The boulder lost its steel bands: plain rock whose cracks glow with fire for a moment when you punch it
+  - Camp celebration sparks are gold, the valley lights are a few warm village fires
+  - Perks renamed to fit: Heavy Fist, Bronze Armour, Sure Footing
+- The summit is now clearly the top of YOUR mountain: a long ridge starts just ahead of the road and climbs to a great snowy peak straight ahead, its lower slopes sinking into mist and cloud. It no longer looks like a separate island across a sea of cloud. The sunrise now comes up over the cloud sea on the right
+- v6 kept at versions/v6.html
+
 ## [Smashball v4 "Goal"] - 2026-11-23
 - **Rebound is now Smashball.** The game id and link stay `games/rebound/`, so old links, scores and analytics keep working
 - Rebuilt from scratch as real source (`games/rebound/src/`, same toolkit as Summit) instead of the old sealed bundle

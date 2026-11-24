@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [Bounce Lab 1.14: every game has its own home-screen icon] - 2026-11-24
+- New icons for Bouncer, Smashball, Ascent and Summit, drawn in the lab's look (dark concrete wall, steel, neon) with each game's own colour and one signature element:
+  - Bouncer: two steel platforms and a sharp bounce trail (cyan)
+  - Smashball: a neon goal with the orb hitting the net (orange)
+  - Ascent: the curved pad launching the orb up past chevrons (magenta)
+  - Summit: a stone boulder on a glowing ridge below the gold summit light
+- "Add to Home Screen" from a game now saves that game (its own name, icon, and it opens straight into the game). Before, every game used the lab's manifest, so a saved game could open the lobby
+- Each game's browser tab shows its icon too
+- Made by `tools/make_game_icons.py` (rerun after shipping a new version of a game)
+
 ## [Bounce Lab 1.13: sound works on iPhone, one sound setting] - 2026-11-24
 - Fix: no sound on iPhone in any game. Two causes: Safari silenced the games when the phone's ring/silent switch was on silent, and the games tried to start their sound on finger-down, which iPhone doesn't allow (sound may only start when a tap finishes), so the sound stayed stuck off. The lab now asks iPhone for "playback" audio (plays even on silent, like a video) and wakes the sound up on every tap. Games that pause their sound on purpose stay quiet until you resume
 - One sound setting for the whole lab: muting or unmuting in any game (or the lobby) applies everywhere and is remembered (localStorage bouncelab-muted; the old per-game settings carry over)

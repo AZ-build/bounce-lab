@@ -50,7 +50,8 @@ A side-scrolling parade (`index.html`). The hop logic is in `hop()`; per-game fe
 - Best energy saved in localStorage as `bouncelab-lobby-energy`
 
 ## Installable app
-`manifest.webmanifest` + `icons/` + `sw.js` at the site root. The service worker is network-first, so online visitors always get fresh files. Bump `CACHE` in sw.js only if you need to wipe everyone's offline copy. The icon is drawn by a small script (see icons/icon.svg, exported with rsvg-convert)
+`manifest.webmanifest` + `icons/` + `sw.js` at the site root. The service worker is network-first, so online visitors always get fresh files. Bump `CACHE` in sw.js only if you need to wipe everyone's offline copy. The icon is drawn by a small script (see icons/icon.svg, exported with rsvg-convert).
+Each game also has its own icon and manifest (`games/<id>/icons/`, `games/<id>/manifest.webmanifest`) from `tools/make_game_icons.py`: scenes per `icon` kind (side, goal, up, peak), the game's `color` as the neon. Manifest `start_url` is the game, `scope` is the whole site (so Back to the lab stays in the app window), `id` is unique per game so a game can be installed next to the lab. Rerun the script after replacing a game's index.html; bump `ICON_V` in it when the art changes
 
 ## Sharing
 `S.share()` / `S.siteUrl()` are in store.js. Challenge links use `?vs=<score>&by=<name>`, handled in lab.js. Preview images come from `tools/make_share_images.py`; rerun it after adding a game.

@@ -45,14 +45,18 @@ The lab gives you the pieces: `BounceLab.leaderboard(element, { n: 10 })` fills 
 ## 4. Add it to the lobby
 Open `games.js` and copy one of the entries. Change `id`, `title`, `tagline`, `description`, `controls`, `color` and `version`. The new ball appears in the lobby automatically.
 
-`icon` can be `"side"`, `"goal"` or `"up"`. Leave it `""` to show the game's first letter.
+`icon` can be `"side"`, `"goal"`, `"up"` or `"peak"`. Leave it `""` to show the game's first letter.
 
-## 5. Preview image for sharing
+## 5. Home-screen icon
+Ask Claude to run `tools/make_game_icons.py`. It draws the game's icon in the lab style (concrete wall, steel, the game's neon colour) and writes `games/<id>/icons/` plus `games/<id>/manifest.webmanifest`, then points the game's page at them. That way "Add to Home Screen" saves the game itself, with its own icon and name, instead of the lobby. A new kind of game gets the lab orb in its colour until it has its own scene in the script.
+
+## 5b. Preview image for sharing
 Ask Claude to run `tools/make_share_images.py`. It makes `games/<id>/share.jpg` and adds the preview tags, so the game's link shows a picture in chat apps.
 
 ## 6. Shipping a new version of an existing game
 1. Save the new version as `games/<id>/versions/vN.html`.
 2. Make `games/<id>/index.html` the new version, with the lab line and hooks, and `data-version="vN"`.
 3. In `games.js`, update `version`, `versionName` and `updated`, and add `vN` to `versions`.
+4. Run `python3 tools/make_game_icons.py <id>` so the new page keeps the game's own icon and home-screen name.
 
 Each version's runs, scores and feedback are tagged with its version number, so the admin page shows whether v6 is liked more than v5.

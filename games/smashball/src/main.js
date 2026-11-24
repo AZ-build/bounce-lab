@@ -1018,7 +1018,14 @@ cameraUpdate(1 / 60, true);
 render(1 / 60, 0);
 try { renderer.compile(scene, camera); } catch {}
 composer.render();
-let last = performance.now(), acc = 0;
+let last = performance.now(), acc = 0, paused = false;
+// Bounce Lab pause menu (its button sits under the sound toggle)
+if (window.BounceLab && BounceLab.pausable) BounceLab.pausable({
+  pause() { paused = true; joyEnd(); if (ac) ac.suspend().catch(() => {}); },
+  resume() { paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); },
+  restart() { paused = false; if (ac) ac.resume().catch(() => {}); mode = 'over'; start(); },
+  offset: { top: 48, right: 4 },
+});
 const FIXED = 1 / 120;
 const perf = { t: 0, n: 0 };
 function watchPerf(dt) {
@@ -1034,6 +1041,7 @@ function watchPerf(dt) {
 let titleT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  if (paused) { last = now; return; }
   const raw = (now - last) / 1000; last = now;
   let dt = Math.min(.05, raw);
   if (mode === 'play') {

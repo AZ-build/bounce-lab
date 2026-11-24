@@ -27,7 +27,8 @@ canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;touch-
 .ib.off{opacity:.4}
 .ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,rgba(10,28,58,.45),rgba(2,3,10,.9) 75%);opacity:0;transition:opacity .4s;padding:20px;overflow:auto}
 .ov.on{opacity:1;pointer-events:auto}
-.ov{touch-action:pan-y}
+.ov{touch-action:pan-y;justify-content:flex-start;padding:calc(env(safe-area-inset-top) + 52px) 20px calc(env(safe-area-inset-bottom) + 24px)}
+.ov>:first-child{margin-top:auto}.ov>:last-child{margin-bottom:auto}
 #setOv{justify-content:flex-start}
 .panel{width:100%;max-width:350px;text-align:left;padding:6px 2px 16px;margin:auto 0}
 .panel h3{font:900 22px Orbitron,system-ui,sans-serif;letter-spacing:.12em;margin:0 0 10px;text-align:center;color:#fff;text-shadow:0 0 10px #3ff3ff}
@@ -79,7 +80,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <!-- share-preview:end -->
-<script src="../../lab/lab.js?v=1.8.2" data-game="ascent" data-version="v5"></script>
+<script src="../../lab/lab.js?v=1.9" data-game="ascent" data-version="v5"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -113,6 +114,7 @@ h2{font:900 clamp(26px,8vw,38px) Orbitron,system-ui,sans-serif;margin:0 0 6px;le
     <button class="btn" id="resumeBtn">RESUME</button>
     <button class="btn ghost" id="setBtnPause">SETTINGS</button>
     <button class="btn ghost" id="quitBtn">MAIN MENU</button>
+    <div id="labLinks" style="width:min(300px,86vw)"></div>
   </div>
 
   <div class="ov" id="setOv">
@@ -992,6 +994,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{if(KMAP[e.key])keys[KMAP[e.key]]=false});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+window.BounceLab&&BounceLab.menuLinks&&BounceLab.menuLinks($('#labLinks'));
 $('#playBtn').onclick=start;$('#againBtn').onclick=start;$('#resumeBtn').onclick=resume;$('#quitBtn').onclick=toMenu;$('#menuBtn').onclick=toMenu;
 $('#pauseBtn').onclick=()=>{state==='play'?pause():resume()};
 const muteBtn=$('#muteBtn');

@@ -25,7 +25,7 @@
          letter-spacing:.35em;text-transform:uppercase;opacity:0;transition:opacity .3s}
   .screen{position:absolute;left:0;right:0;text-align:center;transition:opacity .6s ease}
   .hidden{opacity:0 !important}
-  #title{top:4vh}
+  #title{top:max(4vh,calc(env(safe-area-inset-top) + 50px))}
   #title h1{margin:0;font-weight:200;font-size:clamp(28px,min(9vw,8vh),60px);letter-spacing:.42em;padding-left:.42em}
   #title .tag{margin-top:8px;font-weight:300;font-size:11px;letter-spacing:.5em;text-transform:uppercase;opacity:.45;padding-left:.5em}
   #hint{bottom:5vh;font-weight:300;font-size:12px;letter-spacing:.26em;text-transform:uppercase;line-height:2.2;opacity:.85;padding:0 12px}
@@ -65,7 +65,7 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <!-- share-preview:end -->
-<script src="../../lab/lab.js?v=1.8.2" data-game="bouncer" data-version="v6"></script>
+<script src="../../lab/lab.js?v=1.9" data-game="bouncer" data-version="v6"></script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -1441,8 +1441,16 @@ function render() {
   ctx.globalCompositeOperation = 'source-over'; ga(1);
 }
 
-let last = performance.now();
+let last = performance.now(), paused = false;
+// Bounce Lab pause menu (pause button under the sound toggle)
+if (window.BounceLab && BounceLab.pausable) BounceLab.pausable({
+  pause() { paused = true; if (AC) AC.suspend().catch(() => {}); },
+  resume() { paused = false; last = performance.now(); if (AC) AC.resume().catch(() => {}); },
+  restart() { paused = false; if (AC) AC.resume().catch(() => {}); startGame(); },
+  offset: { top: 36 },
+});
 function frame(now) {
+  if (paused) { last = now; requestAnimationFrame(frame); return; }
   const rdt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
   timeScale += (1 - timeScale) * Math.min(1, rdt * 1.1);
   try { update(rdt * timeScale, rdt); render(); }

@@ -112,3 +112,39 @@
 #bl-bar { background: linear-gradient(180deg, rgba(22,23,28,.6), rgba(5,6,8,.9)), url('../assets/concrete.png') 0 0 / 256px 256px, #0d0e11; }
 #bl-root .bl-btn { border: 2.5px solid transparent !important; background: radial-gradient(120% 140% at 50% 0%, rgba(20,90,100,.9), rgba(4,22,26,.95)) padding-box, linear-gradient(180deg,#9aa1ab,#3a3f47 30%,#1b1d22 55%,#5b616b 80%,#22252b) border-box !important;
   box-shadow: 0 0 6px var(--bl-cy), 0 0 16px rgba(62,246,255,.45), inset 0 0 0 1.5px #b9fbff, inset 0 0 12px rgba(62,246,255,.45) !important; }
+
+/* rate chip (menus) */
+#bl-ratechip { pointer-events: auto; display: flex; align-items: center; gap: 5px; padding: 7px 12px !important; border-radius: 999px !important; font-size: 12px !important; font-weight: 700 !important;
+  letter-spacing: .12em; text-transform: uppercase; color: #ffe7a8 !important; background: rgba(10,11,14,.7) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.07); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+/* pause button (while playing) */
+#bl-pausebtn { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + var(--bl-pt, 0px)); right: calc(max(10px, env(safe-area-inset-right)) + var(--bl-pr, 0px));
+  width: 38px; height: 38px; border-radius: 50% !important; display: none; align-items: center; justify-content: center; pointer-events: auto;
+  background: rgba(10,11,14,.55) !important; color: #e8f1ff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(255,255,255,.12), 0 4px 12px rgba(0,0,0,.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#bl-pausebtn .bl-i { width: 18px; height: 18px; stroke-width: 3; }
+#bl-root.bl-playing.bl-can-pause:not(.bl-paused):not(.bl-ownbtn) #bl-pausebtn { display: flex; }
+
+/* pause menu */
+#bl-pause { position: absolute; inset: 0; display: none; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; pointer-events: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: rgba(4,5,8,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#bl-root.bl-paused #bl-pause { display: flex; }
+#bl-root.bl-pause-hidden #bl-pause { display: none; }
+.bl-pcard { margin: auto; width: min(340px, 100%); display: flex; flex-direction: column; gap: 10px; text-align: center; padding: 22px 20px 18px; border-radius: 26px;
+  background: linear-gradient(180deg, rgba(22,23,28,.6), rgba(5,6,8,.92)), url('../assets/concrete.png') 0 0 / 256px 256px, #0d0e11;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 20px 60px rgba(0,0,0,.6); }
+.bl-ptitle { font-size: 26px; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: #eafeff; text-shadow: 0 0 12px var(--bl-cy); margin-bottom: 4px; }
+#bl-root .bl-pbig { padding: 14px 18px !important; font-size: 17px !important; }
+.bl-pextras { display: flex; flex-direction: column; gap: 8px; }
+.bl-pextras:empty { display: none; }
+
+/* rate / suggest / back block (lab pause menu, and games' own menus) */
+.bl-links { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08);
+  font: 400 15px/1.4 "Chakra Petch", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #e8f1ff; pointer-events: auto; width: 100%; }
+.bl-links .bl-lq { font-size: 14px; color: #a9b4c6; }
+.bl-links .bl-starrow { justify-content: center; }
+.bl-links .bl-star { font-size: 30px !important; background: none; border: 0; cursor: pointer; }
+.bl-links .bl-lbtn { width: 100%; max-width: 300px; padding: 11px 14px; border-radius: 14px; font: inherit; font-weight: 600; font-size: 14px; color: #e8f1ff; text-decoration: none; text-align: center; cursor: pointer;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); display: block; box-sizing: border-box; }
+.bl-links .bl-lbtn:active { background: rgba(255,255,255,.14); }
+.bl-links .bl-back { color: #a9b4c6; background: none; border-color: transparent; }

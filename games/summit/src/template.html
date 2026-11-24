@@ -88,9 +88,29 @@
   #smackBtn.inreach .face { box-shadow: 0 0 30px var(--gold), inset 0 0 18px rgba(255,194,58,.35); border-color: var(--gold); }
   #smackBtn.down .face { transform: scale(.9); }
 
-  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    padding: 0 24px calc(env(safe-area-inset-bottom) + 52px); text-align: center;
+  /* menus fill the visible screen and scroll if a phone is too short, so nothing gets cut off top or bottom */
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: calc(env(safe-area-inset-top) + 58px) 24px calc(env(safe-area-inset-bottom) + 36px); text-align: center;
     background: linear-gradient(to top, rgba(2,3,8,.94) 0%, rgba(2,3,8,.6) 45%, rgba(2,3,8,0) 70%); }
+  .screen > :first-child { margin-top: auto; }
+  #over { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }   /* room for the lab bar (scores, share, rating) */
+  @media (max-height: 620px) { .logo { font-size: 44px !important; } .how { margin: 14px 0 14px !important; gap: 6px !important; font-size: 14px !important; } .btn { padding: 14px 40px !important; } }
+  /* loading screen */
+  #boot { position: fixed; inset: 0; z-index: 2147483600; display: flex; align-items: center; justify-content: center; background: radial-gradient(120% 80% at 50% 100%, #2a1c22 0%, #0b0d16 55%, #04050a 100%);
+    color: #fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; transition: opacity .6s; }
+  #boot.done { opacity: 0; pointer-events: none; }
+  .bootIn { width: min(300px, 80vw); text-align: center; }
+  .bootT { font-size: 44px; font-weight: 900; letter-spacing: 9px; margin-right: -9px; color: #e9edf3; text-shadow: 0 0 22px rgba(255,150,70,.45); }
+  .bootHill { position: relative; height: 70px; margin: 26px 0 18px; }
+  .bootHill::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, #8d7c6e 15%, #8d7c6e 85%, transparent); transform: rotate(-14deg); transform-origin: left bottom; width: 100%; }
+  .bootHill i { position: absolute; left: 6%; bottom: 3px; width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #9a9aa2, #47474f 60%, #222 80%);
+    animation: bootRoll 2.6s cubic-bezier(.45,.05,.55,.95) infinite; }
+  @keyframes bootRoll { 0% { transform: translate(0, 0) rotate(0); } 62% { transform: translate(230%, -60px) rotate(400deg); } 70% { transform: translate(235%, -62px) rotate(410deg); } 100% { transform: translate(0, 0) rotate(0); } }
+  .bootBar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .bootBar b { display: block; height: 100%; background: linear-gradient(90deg, #ff8a3a, #ffc23a); transform-origin: left; transform: scaleX(.04); transition: transform .35s; }
+  #bootMsg { margin-top: 12px; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: .65; }
+  #bootMsg::after { content: "..."; }
+  #boot.done #bootMsg::after { content: ""; }
   .logo { font-size: 54px; font-weight: 900; letter-spacing: 10px; margin-right: -10px; line-height: 1;
     background: linear-gradient(180deg, #ffffff 15%, #b9c3cf 55%, #6c7583); -webkit-background-clip: text; background-clip: text; color: transparent;
     filter: drop-shadow(0 2px 0 rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(255,150,70,.45)); }
@@ -141,6 +161,7 @@
 <!-- share-preview:end -->
 </head>
 <body>
+<div id="boot"><div class="bootIn"><div class="bootT">SUMMIT</div><div class="bootHill"><i></i></div><div class="bootBar"><b id="bootFill"></b></div><div id="bootMsg">Loading</div></div></div>
 <canvas id="c"></canvas>
 <div id="flash"></div>
 <div id="pops"></div>
@@ -198,6 +219,6 @@
   <div id="oQuote"></div>
 </div>
 <div id="fade"></div>
-<script>/*GAME*/</script>
+<script type="module">/*GAME*/</script>
 </body>
 </html>

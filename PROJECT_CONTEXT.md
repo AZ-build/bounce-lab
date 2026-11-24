@@ -90,3 +90,10 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Goal celebration: `celebrate()` / `stepCelebration()` / `endCelebration()` with state in `CEL` (hops, spin, fireworks timings `ROCKET_AT`), the floor `shock` ring, and the celebration camera inside `cameraUpdate()`
 - Bot brain: `think(o, s)` (also drives your striker when `S.autoplay` is on, for testing)
 - Test hook: `window.__smashball` (S, P, B, ball, CEL, start, tap, update, think, stick, cameraUpdate, scored)
+
+## Lab rules for every game (since lab 1.9)
+- Every game must call `BounceLab.pausable({ pause, resume, restart })` (or have its own pause screen and call `BounceLab.menuLinks(el)` inside it). The lab draws the pause button (use `offset: { top, right }` to dodge the HUD) and the pause menu: Resume, Restart, extras, rate, suggest, back to lab
+- Rating and back-to-lab live only in menus: title (Lab + Rate chips), pause menu, game-over bar. Never during play
+- Menus must fit short phones: scrollable overlays with `margin-top: auto` on the first child (not `justify-content: center/flex-end` with overflow), padding for safe areas, the Lab chips (~52px) and the game-over bar (~96px)
+- Bump the `lab.js?v=` cache-buster in every game when lab.js/lab.css change (currently 1.9)
+- Heavy games show a loading screen first (Summit: `#boot` + `bootStep()`; the game script is a module so the page paints before it runs)

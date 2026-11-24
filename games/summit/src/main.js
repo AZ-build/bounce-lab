@@ -9,6 +9,14 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BONES as BODY_BONES, BONE_NAMES as BODY_BONE_NAMES } from './sdfbody.mjs';
+// ---- loading screen: the page shows it instantly; we update it and let the browser draw between the heavy steps
+let booting = true;
+const bootEl = document.getElementById('boot');
+async function bootStep(msg, pct) {
+  if (bootEl) { document.getElementById('bootMsg').textContent = msg; document.getElementById('bootFill').style.transform = `scaleX(${pct / 100})`; }
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+}
+await bootStep('Carving the mountain', 12);
 
 // ---------------------------------------------------------------- tuning
 const CFG = {
@@ -447,6 +455,7 @@ function groundTextures(S = 512) {
   const map = tex(c1), nmap = tex(c2, 1, false);
   return { map, nmap };
 }
+await bootStep('Grinding the gravel', 22);
 const GT = groundTextures();
 const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: GT.map, normalMap: GT.nmap, normalScale: new THREE.Vector2(1.3, 1.3), roughness: .95, metalness: 0 });
 groundMat.map.repeat.set(1 / 5, 1 / 5); groundMat.normalMap.repeat.set(1 / 5, 1 / 5);
@@ -944,7 +953,7 @@ const J = {}; // bones
   }
   const bones = BODY_BONE_NAMES.map(n => J[n]);
   // the marble body arrives a moment after load (it's unpacked in the background)
-  loadBodyGeometry().then(geo => {
+  bodyReady = loadBodyGeometry().then(geo => {
     // bind in the rest pose (the walk may already be posing the bones by the time the body arrives)
     const saved = bones.map(b => [b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
     for (const [name, [, x, y, z]] of Object.entries(BODY_BONES)) { J[name].position.set(x, y, z); J[name].quaternion.identity(); J[name].scale.set(1, 1, 1); }
@@ -1115,6 +1124,7 @@ async function loadBodyGeometry() {
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
   return geo;
 }
+let bodyReady = Promise.resolve();
 const reachRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .78, .35).multiplyScalar(1.5), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
 scene.add(reachRing);
 const ARC_N = 40;
@@ -1337,6 +1347,14 @@ function chips() {
 
 // ---------------------------------------------------------------- game state
 let mode = 'title';
+let paused = false;
+if (window.BounceLab && BounceLab.pausable) BounceLab.pausable({
+  pause() { paused = true; P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); $('#power').classList.remove('on'); if (chargeGain) chargeGain.gain.value = 0; if (ac) ac.suspend().catch(() => {}); },
+  resume() { paused = false; last = performance.now(); acc = 0; if (ac) ac.resume().catch(() => {}); },
+  restart() { paused = false; if (ac) ac.resume().catch(() => {}); for (const id of ['#perks', '#charon']) $(id).classList.add('hide'); $('#fallCount').classList.remove('on'); perkChoices = null; mode = 'over'; start(); },
+  extras: () => [{ label: muted ? 'Sound: off' : 'Sound: on', onClick: () => $('#mute').click() }],
+  offset: { top: 46, right: 6 },
+});
 const S = { score: 0, bonus: 0, maxAlt: 0, lives: 1, maxLives: 1, baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0, fallFrom: 0, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4,
   longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 0, pendingPerk: 0, hitstop: 0, best: store.get('summit-best-h1', 0) };
 const total = () => Math.round(S.baseAlt + Math.max(0, S.maxAlt));
@@ -1362,7 +1380,7 @@ function placeBall(d, off, lift = 3) {
   ball.p.set(x, G(d, x) + ball.r + lift, -d); ball.v.set(0, 0, 0); ball.lost = 0; ball.heat = 0; ball.flying = false;
 }
 function start() {
-  if (mode !== 'title' && mode !== 'over') return;
+  if (booting || (mode !== 'title' && mode !== 'over')) return;
   audio();
   MT = 0; resetHeights(); sumFx.active = false; sumFx.dawn = 0; $('#fade').classList.remove('on');
   Object.assign(S, { baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0 });
@@ -2041,9 +2059,11 @@ function resize() {
   camera.aspect = aspect; camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
+await bootStep('Building the road', 45);
 resize(); resetWorld();
+await bootStep('Lighting the fires', 62);
 // compile every kind of object once, up front, behind the title screen (no mid-game shader hitches)
-(() => {
+await (async () => {
   const warm = new THREE.Group();
   const add = o => { o.position.set(P.p.x + rnd(-3, 3), P.p.y + 2, P.p.z - 14); warm.add(o); };
   CELL.forEach((_, i) => add(makeCell(i)));
@@ -2056,11 +2076,16 @@ resize(); resetWorld();
   scene.add(warm);
   arc.visible = arcLand.visible = true; snowPts.material.opacity = .5;
   render(1 / 60, 0);
-  try { renderer.compile(scene, camera); } catch {}
+  try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch {}
+  await bootStep('Waking Sisyphus', 85);
   composer.render();
   scene.remove(warm);
   arc.visible = arcLand.visible = false;
 })();
+await bodyReady;
+await bootStep('Ready', 100);
+booting = false;
+if (bootEl) { bootEl.classList.add('done'); document.getElementById('bootMsg').textContent = 'Ready'; setTimeout(() => bootEl.remove(), 700); }
 render(1 / 60, 0);
 let last = performance.now(), acc = 0;
 const FIXED = 1 / 120;
@@ -2078,6 +2103,7 @@ function watchPerf(dt) {
 }
 function frame(now) {
   requestAnimationFrame(frame);
+  if (paused) { last = now; return; }
   const raw = (now - last) / 1000; last = now;
   let dt = Math.min(.05, raw);
   if (mode === 'play') {

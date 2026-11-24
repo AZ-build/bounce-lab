@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [Bounce Lab 1.9: pause, rate and back to the lab everywhere] - 2026-11-23
+- Every game can now be paused: a pause button appears while you play (Summit, Bouncer and Smashball get the lab's pause button under their sound toggle; Bouncer Ascent keeps its own). Switching apps or tabs pauses automatically. Esc or P also pauses on a keyboard
+- The pause menu: Resume, Restart, rate the game with stars, Suggest an improvement, and Back to Bounce Lab (Ascent's own pause screen gets the same rate / suggest / back block)
+- Main menus: next to the Lab chip there's now a "Rate" chip that opens rating + feedback. The game-over bar still has scores, share and stars
+- New lab hooks for games: BounceLab.pausable({ pause, resume, restart, extras, offset }) and BounceLab.menuLinks(element). The game template shows how
+- Menus no longer get cut off on shorter phones: Summit and Ascent menus scroll when they don't fit and keep clear of the notch, the Lab chips and the bottom bar; Bouncer's title sits below the chips
+- Summit v9.1: a loading screen (a boulder rolling up and back down, with a progress bar) shows instantly instead of a frozen page, and the heavy setup now happens in steps behind it. Shader warm-up uses the browser's background compiler where available
+
 ## [Summit v9 "The Summits"] - 2026-11-23
 - One boulder, like the myth. Lose it and it rolls all the way back down while your height counts back to zero, then your score is posted
 - Your score is now your height (total metres climbed), shown big at the top. Points are still counted and shown at the end

@@ -5,6 +5,12 @@
      BounceLab.start()                     // when a run begins
      BounceLab.gameOver(score, {stats})    // when a run ends
    Everything else (back button, leaderboard, rating, feedback, analytics) is automatic.
+   Pausing (every game should do this):
+     BounceLab.pausable({ pause() {...}, resume() {...}, restart() {...} })   // lab shows a pause button + menu
+       options: extras: [{ label, onClick }] or a function returning that list, offset: { top, right } (px, to dodge your HUD),
+                button: false (you draw your own pause button and call BounceLab.pause()), keys: false (you handle Esc/P yourself)
+     Games with their own pause/menu screens can drop the lab's rate / feedback / back-to-lab block into them:
+       BounceLab.menuLinks(element)
 */
 (function () {
   'use strict';
@@ -22,13 +28,22 @@
   // queue calls made before the store finishes loading
   const queue = [];
   let S = null, ui = null;
-  const state = { playing: false, startT: 0, score: null, stats: null, posted: false, runId: 0 };
+  const state = { playing: false, paused: false, startT: 0, score: null, stats: null, posted: false, runId: 0 };
+  let pauser = null;                                    // the game's pause hooks (BounceLab.pausable)
+  const linkBoxes = [];                                 // game menus that asked for the rate / feedback / back block
   const API = {
     _ready: false,
     game: GAME, version: VERSION,
     start() { if (!API._ready) return queue.push(['start', arguments]); onStart(); },
     gameOver(score, stats) { if (!API._ready) return queue.push(['gameOver', arguments]); onOver(score, stats); },
-    menu() { if (!API._ready) return queue.push(['menu', arguments]); state.playing = false; state.runId++; ui.root.classList.remove('bl-playing', 'bl-over'); },
+    menu() { if (!API._ready) return queue.push(['menu', arguments]); state.playing = false; state.runId++; setPaused(false); ui.root.classList.remove('bl-playing', 'bl-over'); },
+    pausable(opts) { pauser = opts || {}; if (ui) applyPauser(); },
+    pause() { if (!ui || !pauser || !state.playing || state.paused) return; setPaused(true); try { pauser.pause && pauser.pause(); } catch (e) { console.warn(e); } S.track(GAME + '/pause', 'Paused'); },
+    resume() { if (!ui || !state.paused) return; setPaused(false); closeSheet(); try { pauser && pauser.resume && pauser.resume(); } catch (e) { console.warn(e); } },
+    get paused() { return state.paused; },
+    hidePauseMenu() { if (ui) ui.root.classList.add('bl-pause-hidden'); },
+    showPauseMenu() { if (ui) ui.root.classList.remove('bl-pause-hidden'); },
+    menuLinks(el) { if (!el) return; if (!ui) { linkBoxes.push(el); return; } fillLinks(el); },
     exit() { location.href = new URL('index.html', ROOT_URL).href; },
     openFeedback() { if (ui) openSheet('fb'); }
   };
@@ -82,13 +97,20 @@
     const root = document.createElement('div');
     root.id = 'bl-root';
     root.innerHTML = `
-      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>Lab</a><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
+      <div id="bl-top"><a id="bl-chip" href="${new URL('index.html', ROOT_URL).href}" aria-label="Back to Bounce Lab"><span class="bl-dot"></span>Lab</a><button id="bl-ratechip" aria-label="Rate this game and suggest improvements">&#9733; Rate</button><button id="bl-sharechip" aria-label="Share this game"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button></div>
       <div id="bl-bar" role="toolbar" aria-label="Bounce Lab">
         <button class="bl-home" aria-label="Back to the lab">&#9664;</button>
         ${NO_BOARD ? '<button class="bl-board bl-fbbtn"><span>Leave feedback</span></button>' : '<button class="bl-board"><span>Scores</span></button>'}
         <button class="bl-sharebtn" aria-label="Share your score"><svg viewBox="0 0 24 24" class="bl-i"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></button>
         <button class="bl-stars" aria-label="Rate this game"><div class="bl-starrow">${[1,2,3,4,5].map(i => `<span class="bl-star" data-s="${i}">&#9733;</span>`).join('')}</div></button>
       </div>
+      <button id="bl-pausebtn" aria-label="Pause"><svg viewBox="0 0 24 24" class="bl-i"><path d="M9 5v14M15 5v14"/></svg></button>
+      <div id="bl-pause" role="dialog" aria-label="Paused"><div class="bl-pcard">
+        <div class="bl-ptitle">Paused</div>
+        <button class="bl-btn bl-pbig" id="bl-resume">Resume</button>
+        <div class="bl-pextras"></div>
+        <div class="bl-links" id="bl-plinks"></div>
+      </div></div>
       <div id="bl-scrim"></div>
       <div id="bl-sheet" role="dialog" aria-label="Leaderboard and feedback">
         <div class="bl-head">
@@ -126,10 +148,21 @@
 
     // Keep taps and key presses inside the lab UI from reaching the game.
     ['pointerdown', 'pointerup', 'pointermove', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'touchmove', 'click', 'keydown', 'keyup', 'wheel'].forEach(ev =>
-      root.addEventListener(ev, e => { if (e.target.closest('#bl-top,#bl-bar,#bl-sheet,#bl-scrim')) e.stopPropagation(); }, { passive: true }));
+      root.addEventListener(ev, e => { if (e.target.closest('#bl-top,#bl-bar,#bl-sheet,#bl-scrim,#bl-pause,#bl-pausebtn')) e.stopPropagation(); }, { passive: true }));
 
     $('#bl-chip').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
     $('#bl-sharechip').addEventListener('click', shareGame);
+    $('#bl-ratechip').addEventListener('click', () => openSheet('fb'));
+    $('#bl-pausebtn').addEventListener('click', () => API.pause());
+    $('#bl-resume').addEventListener('click', () => API.resume());
+    fillLinks($('#bl-plinks'));
+    while (linkBoxes.length) fillLinks(linkBoxes.shift());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) API.pause(); });
+    window.addEventListener('keydown', e => {
+      if (!pauser || pauser.keys === false || !state.playing) return;
+      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') { e.stopImmediatePropagation(); e.preventDefault(); state.paused ? API.resume() : API.pause(); }
+    }, true);
+    if (pauser) applyPauser();
     $('.bl-sharebtn').addEventListener('click', shareScore);
     $('.bl-home').addEventListener('click', () => { S.track(GAME + '/back-to-lab', 'Back to lab'); API.exit(); });
     $('.bl-board').addEventListener('click', () => openSheet(NO_BOARD ? 'fb' : 'lb'));
@@ -156,7 +189,33 @@
     paintStars(S.ls.get(key('rating'), 0));
   }
 
-  function paintStars(n) { ui.root.querySelectorAll('.bl-star').forEach(s => s.classList.toggle('on', +s.dataset.s <= n)); }
+  // ---------- pause menu ----------
+  function setPaused(on) { state.paused = on; if (ui) { ui.root.classList.toggle('bl-paused', on); if (!on) ui.root.classList.remove('bl-pause-hidden'); if (on) buildExtras(); } }
+  function applyPauser() {
+    const r = ui.root; r.classList.add('bl-can-pause'); r.classList.toggle('bl-ownbtn', pauser.button === false);
+    const o = pauser.offset || {}; r.style.setProperty('--bl-pt', (o.top || 0) + 'px'); r.style.setProperty('--bl-pr', (o.right || 0) + 'px');
+  }
+  function buildExtras() {
+    const box = $('.bl-pextras'); box.innerHTML = '';
+    const list = (typeof pauser.extras === 'function' ? pauser.extras() : pauser.extras) || [];
+    if (pauser.restart) list.unshift({ label: 'Restart', onClick: () => { setPaused(false); pauser.restart(); } });
+    for (const it of list) { const b = document.createElement('button'); b.className = 'bl-btn bl-ghost'; b.textContent = it.label; b.addEventListener('click', () => { it.onClick && it.onClick(); if (state.paused && !it.keepOpen) buildExtras(); }); box.appendChild(b); }
+  }
+  // rate / suggest / back-to-lab block: used in the lab's pause menu and in games' own menus
+  function fillLinks(el) {
+    const g = info();
+    el.classList.add('bl-links');
+    el.innerHTML = `<div class="bl-lq">Enjoying ${esc(g.title || 'this game')}?</div>
+      <div class="bl-starrow">${[1,2,3,4,5].map(i => `<button class="bl-star" data-s="${i}" aria-label="${i} stars">&#9733;</button>`).join('')}</div>
+      <button class="bl-lbtn bl-suggest">Suggest an improvement</button>
+      <a class="bl-lbtn bl-back" href="${new URL('index.html', ROOT_URL).href}">&#9664;&nbsp; Back to Bounce Lab</a>`;
+    el.querySelectorAll('.bl-star').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); rate(+b.dataset.s, false); toast('Thanks for rating!'); }));
+    el.querySelector('.bl-suggest').addEventListener('click', e => { e.stopPropagation(); openSheet('fb'); });
+    el.querySelector('.bl-back').addEventListener('click', () => S.track(GAME + '/back-to-lab', 'Back to lab'));
+    ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
+    paintStars(S.ls.get(key('rating'), 0));
+  }
+  function paintStars(n) { document.querySelectorAll('#bl-root .bl-star, .bl-links .bl-star').forEach(s => s.classList.toggle('on', +s.dataset.s <= n)); }
   function showTab(t) {
     ui.root.querySelectorAll('.bl-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     ui.root.querySelectorAll('.bl-pane').forEach(p => p.classList.toggle('on', p.dataset.pane === t));
@@ -167,14 +226,14 @@
 
   // ---------- run lifecycle ----------
   function onStart() {
-    state.playing = true; state.startT = performance.now(); state.score = null; state.posted = false; state.runId++;
+    state.playing = true; state.startT = performance.now(); state.score = null; state.posted = false; state.runId++; setPaused(false);
     ui.root.classList.add('bl-playing'); ui.root.classList.remove('bl-over'); closeSheet();
     S.track(GAME + '/start', 'Run started');
   }
   function onOver(score, stats) {
     score = Math.max(0, Math.floor(Number(score) || 0));
     const dur = state.startT ? (performance.now() - state.startT) / 1000 : 0;
-    state.playing = false; state.score = score; state.stats = stats || null; state.posted = false;
+    state.playing = false; state.score = score; state.stats = stats || null; state.posted = false; setPaused(false);
     const run = state.runId;
     S.recordPlay(GAME, { score, dur, v: VERSION }).catch(() => {});
     S.track(GAME + '/gameover', 'Run ended');

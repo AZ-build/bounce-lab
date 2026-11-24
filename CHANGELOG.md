@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [Summit v5 "The God"] - 2026-11-23
+- Sisyphus re-sculpted as a Greek statue come to life (same rig and moves as v4):
+  - Shaped anatomy instead of tubes: V-tapered torso with pecs, abs, lats, shoulder blades, spine groove and traps; capped deltoids; biceps/triceps, forearms, quads, kneecaps and calves
+  - Polished veined marble with a soft blue rim light so he reads against the dark mountain
+  - Head with a Greek profile, carved curls and a full beard, and a gold laurel wreath
+  - Crimson drapery: a folded hip wrap, a sash over the left shoulder pinned with a gold brooch, and a cloak down his back that ripples as he walks and punches
+  - Gold belt, gold arm ring, gold-wrapped punching fist (cestus) with charge rings, leather bracer on the blocking arm, laced sandals
+- The key light now comes from behind the camera so his back and the road get real shading
+- Camera a little closer; he only turns see-through when he really hides the boulder
+- v4 kept at versions/v4.html
+
 ## [Summit v4 "Sisyphus"] - 2026-11-23
 - No more STRIKE button. One finger does it all: press anywhere to wind up, slide side to side to steer while holding, let go to punch. A quick tap is a quick jab. A ring under your finger fills as you wind up and turns gold when the boulder is in reach
 - The crawler is gone: you play Sisyphus himself, a 3.6 m marble figure in a dark wrap, leather straps, sandals and a laurel wreath, trudging uphill with a walk cycle and footsteps. His right fist wears a steel gauntlet with charge rings

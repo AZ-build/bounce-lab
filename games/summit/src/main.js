@@ -1,4 +1,4 @@
-// SUMMIT v4 "Sisyphus" — a Sisyphus game for Bounce Lab.
+// SUMMIT v5 "The God" — a Sisyphus game for Bounce Lab.
 // Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
 // endless mountain road, hurling a giant boulder ahead and smashing it again when it
 // rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
@@ -608,66 +608,192 @@ const P = { d: 0, off: 0, toff: 0, p: new THREE.Vector3(), v: new THREE.Vector3(
   group: new THREE.Group(), walk: 0, lastStep: 0, guard: 0, block: 0, cheer: 0, fade: 1, yaw: 0 };
 const figMats = [];
 const J = {}; // joints
+// Sisyphus as a Greek statue come to life: sculpted marble anatomy, gold laurel and cestus, crimson drapery.
 (() => {
   const g = P.group;
-  const mk = (o) => { const m = new THREE.MeshStandardMaterial({ transparent: true, ...o }); figMats.push(m); return m; };
-  const marbleTex = tex(noiseCanvas(256, (x, s) => {
-    x.fillStyle = '#e9e2d6'; x.fillRect(0, 0, s, s);
-    for (let i = 0; i < 18; i++) { x.strokeStyle = `rgba(120,110,100,${rnd(.05, .14)})`; x.lineWidth = rnd(.5, 2); x.beginPath(); let px = rnd(0, s), py = rnd(0, s); x.moveTo(px, py); for (let k = 0; k < 8; k++) { px += rnd(-40, 40); py += rnd(-40, 40); x.lineTo(px, py); } x.stroke(); }
-    for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '90,80,70'},${rnd(.03, .08)})`; x.fillRect(rnd(0, s), rnd(0, s), 2, 2); }
+  const TAU = Math.PI * 2;
+  const gauss = (x, w) => Math.exp(-(x * x) / (2 * w * w));
+  const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
+  // --- materials
+  const marbleTex = tex(noiseCanvas(512, (x, s) => {
+    x.fillStyle = '#efe8dc'; x.fillRect(0, 0, s, s);
+    for (let i = 0; i < 26; i++) {
+      x.strokeStyle = `rgba(${rnd(120, 160)},${rnd(115, 145)},${rnd(110, 135)},${rnd(.05, .16)})`; x.lineWidth = rnd(.6, 2.4);
+      x.beginPath(); let px = rnd(0, s), py = rnd(0, s); x.moveTo(px, py);
+      for (let k = 0; k < 10; k++) { px += rnd(-50, 50); py += rnd(-35, 35); x.lineTo(px, py); } x.stroke();
+    }
+    for (let i = 0; i < 1200; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '140,128,115'},${rnd(.02, .06)})`; x.fillRect(rnd(0, s), rnd(0, s), 2, 2); }
   }));
-  const marble = mk({ color: 0xe8e0d2, map: marbleTex, roughness: .42, metalness: 0, envMapIntensity: 1.2 });
-  const cloth = mk({ color: 0x40302a, roughness: .95 });
-  const leather = mk({ color: 0x6a4428, roughness: .8 });
-  const hair = mk({ color: 0x3b2f27, roughness: .9 });
-  const steel = mk({ color: 0xd4dbe4, map: steelMap, metalness: .85, roughness: .3, envMapIntensity: 2.2 });
-  const leaf = mk({ color: 0x6f8a3a, roughness: .7 });
+  const withRim = (m, col, k) => { // a soft fresnel rim so his silhouette reads against the dark mountain
+    m.onBeforeCompile = sh => {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        float rimF = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
+        totalEmissiveRadiance += vec3(${col.r.toFixed(3)}, ${col.g.toFixed(3)}, ${col.b.toFixed(3)}) * pow(rimF, 3.0) * ${k.toFixed(2)};`);
+    };
+    return m;
+  };
+  const mk = (Ctor, o, rim) => { const m = new Ctor({ transparent: true, ...o }); if (rim) withRim(m, rim[0], rim[1]); figMats.push(m); return m; };
+  const marble = mk(THREE.MeshPhysicalMaterial, { color: 0xcfc5b4, map: marbleTex, bumpMap: marbleTex, bumpScale: .4, roughness: .48, metalness: 0, clearcoat: .18, clearcoatRoughness: .5, envMapIntensity: .9 }, [new THREE.Color(.7, .82, 1), .28]);
+  const marbleDk = mk(THREE.MeshPhysicalMaterial, { color: 0xa99d8a, map: marbleTex, roughness: .6, metalness: 0, clearcoat: .1, envMapIntensity: .8 }, [new THREE.Color(.7, .82, 1), .22]);
+  const cloth = mk(THREE.MeshStandardMaterial, { color: 0x8a1d22, roughness: .78, side: THREE.DoubleSide }, [new THREE.Color(1, .45, .35), .35]);
+  const gold = mk(THREE.MeshStandardMaterial, { color: 0xe0a94a, metalness: 1, roughness: .34, envMapIntensity: 1.3 });
+  const leather = mk(THREE.MeshStandardMaterial, { color: 0x5a3a22, roughness: .75 });
   const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .55, .2), transparent: true, opacity: 0 }); P.glowM = glowM;
+  // --- helpers
   const add = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
   const joint = (parent, x, y, z) => { const j = new THREE.Group(); j.position.set(x, y, z); parent.add(j); return j; };
-  const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
+  // a turned shape from a radius profile [[y, r], ...] top to bottom, then sculpted: bump(theta, y) scales the radius.
+  // theta = 0 points forward (-z), +PI/2 points to +x.
+  function lathe(profile, segs, bump, sx = 1, sz = 1) {
+    const pts = profile.map(([y, r]) => new THREE.Vector2(r, y)).reverse();
+    const geo = new THREE.LatheGeometry(pts, segs);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(x, z);
+      if (r < 1e-5) continue;
+      const th = Math.atan2(x, -z);
+      const k = bump ? 1 + bump(th, y) : 1;
+      p.setXYZ(i, x * k * sx, y, z * k * sz);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  const ellip = (rx, ry, rz, ws = 18, hs = 14) => { const g = new THREE.SphereGeometry(1, ws, hs); g.scale(rx, ry, rz); return g; };
   const root = joint(g, 0, 0, 0); root.scale.setScalar(2); J.root = root;
   const hips = joint(root, 0, .93, 0); J.hips = hips;
-  const pelvis = add(hips, cap(.14, .14), cloth); pelvis.rotation.z = Math.PI / 2;
-  const kilt = add(hips, new THREE.CylinderGeometry(.19, .25, .3, 14, 1, true), cloth, 0, -.12, 0); kilt.material.side = THREE.DoubleSide;
-  add(hips, new THREE.TorusGeometry(.19, .025, 6, 20), leather, 0, .04, 0).rotation.x = Math.PI / 2; // belt
-  for (const s of [-1, 1]) { // legs
-    const hip = joint(hips, s * .1, -.04, 0); J['hip' + s] = hip;
-    add(hip, cap(.095, .24), marble, 0, -.21, 0);
+
+  // --- pelvis and glutes
+  add(hips, lathe([[.08, .16], [.02, .175], [-.06, .18], [-.12, .15]], 24,
+    (th, y) => .1 * gauss(Math.abs(angDiff(th, Math.PI)) - .55, .45) * gauss(y + .06, .05), 1.15, .9), marble);
+  // hip wrap with deep folds (the himation), hangs to mid thigh
+  const wrap = lathe([[.06, .19], [-.02, .205], [-.14, .235], [-.27, .27], [-.33, .28]], 40,
+    (th, y) => .07 * Math.sin(th * 9 + y * 6) * smooth(.02, -.25, y) + .03 * Math.sin(th * 4 + 1), 1.12, .92);
+  const wrapM = add(hips, wrap, cloth); wrapM.castShadow = true;
+  { const belt = add(hips, new THREE.TorusGeometry(.2, .016, 8, 40), gold, 0, .055, 0); belt.rotation.x = Math.PI / 2; belt.scale.set(1.1, .92, 1); } // gold belt
+  // --- legs: quads, knee, calves
+  for (const s of [-1, 1]) {
+    const hip = joint(hips, s * .095, -.04, 0); J['hip' + s] = hip;
+    add(hip, lathe([[0, .112], [-.06, .114], [-.16, .108], [-.26, .096], [-.35, .08], [-.42, .064], [-.45, .06]], 22,
+      (th, y) => .12 * gauss(angDiff(th, 0), .7) * gauss(y + .18, .1) + .08 * gauss(angDiff(th, -s * .9), .5) * gauss(y + .37, .05)), marble);
     const knee = joint(hip, 0, -.43, 0); J['knee' + s] = knee;
-    add(knee, cap(.072, .26), marble, 0, -.2, 0);
-    add(knee, new THREE.SphereGeometry(.075, 10, 8), marble);
+    add(knee, ellip(.058, .05, .055), marble, 0, -.01, -.012); // kneecap
+    add(knee, lathe([[.02, .062], [-.05, .07], [-.13, .073], [-.22, .056], [-.32, .04], [-.4, .033], [-.42, .032]], 22,
+      (th, y) => .22 * gauss(Math.abs(angDiff(th, Math.PI)), .7) * gauss(y + .11, .07)), marble);
+    for (const y of [-.2, -.27, -.34]) add(knee, new THREE.TorusGeometry(y > -.25 ? .05 : .042, .006, 6, 18), leather, 0, y, 0).rotateX(Math.PI / 2); // sandal laces
     const ankle = joint(knee, 0, -.42, 0);
-    add(ankle, new THREE.BoxGeometry(.1, .05, .23), leather, 0, -.02, -.05);
-    add(knee, new THREE.CylinderGeometry(.064, .062, .08, 10), leather, 0, -.33, 0); // sandal strap
+    add(ankle, ellip(.042, .03, .1), marble, 0, -.012, -.05);
+    add(ankle, new THREE.BoxGeometry(.09, .018, .23), leather, 0, -.04, -.05);
+    add(ankle, new THREE.TorusGeometry(.04, .006, 6, 16), leather, 0, -.005, -.02).rotateX(Math.PI / 2);
   }
-  const spine = joint(hips, 0, .08, 0); J.spine = spine;
-  add(spine, cap(.15, .16), marble, 0, .13, 0);
-  const chest = add(spine, cap(.18, .18), marble, 0, .35, 0); chest.scale.set(1.45, 1, .9);
-  const strap = add(spine, new THREE.BoxGeometry(.06, .62, .02), leather, 0, .3, .15); strap.rotation.z = .62;
-  const strapF = add(spine, new THREE.BoxGeometry(.06, .62, .02), leather, 0, .3, -.15); strapF.rotation.z = .62;
-  add(spine, cap(.068, .06), marble, 0, .53, 0);
-  const head = joint(spine, 0, .63, 0); J.head = head;
-  const skull = add(head, new THREE.SphereGeometry(.11, 16, 12), marble); skull.scale.set(1, 1.12, 1.05);
-  const curls = add(head, new THREE.SphereGeometry(.118, 14, 10), hair, 0, .03, .02); curls.scale.set(1.02, .95, 1.05);
-  add(head, new THREE.SphereGeometry(.07, 10, 8), hair, 0, -.07, -.06).scale.set(1, 1.1, .8); // beard
-  add(head, new THREE.SphereGeometry(.03, 8, 6), marble, 0, -.01, -.11); // nose
-  const wreath = add(head, new THREE.TorusGeometry(.12, .02, 6, 18), leaf, 0, .06, 0); wreath.rotation.x = Math.PI / 2 + .15;
-  for (const s of [-1, 1]) { // arms
-    const sh = joint(spine, s * .28, .45, 0); J['sh' + s] = sh;
-    add(sh, new THREE.SphereGeometry(.1, 12, 10), marble);
-    add(sh, cap(.075, .18), marble, 0, -.15, 0);
+  // --- torso: V-taper, chest, abs, lats, shoulder blades, spine groove, traps
+  const spine = joint(hips, 0, .05, 0); J.spine = spine;
+  const torso = lathe([[.62, .07], [.58, .12], [.54, .2], [.48, .225], [.4, .215], [.3, .19], [.2, .165], [.1, .15], [0, .155], [-.04, .16]], 48,
+    (th, y) => {
+      const front = gauss(angDiff(th, 0), .9), back = gauss(Math.abs(angDiff(th, Math.PI)), .9);
+      const side = gauss(Math.abs(angDiff(th, 0)) - Math.PI / 2, .35);
+      let k = 0;
+      k += .11 * front * gauss(Math.abs(angDiff(th, 0)) - .42, .32) * gauss(y - .41, .055);                      // pecs
+      k -= .05 * front * gauss(y - .36, .025) * gauss(angDiff(th, 0), .5);                                     // under-pec line
+      if (y < .33 && y > .05) k += .025 * front * gauss(angDiff(th, 0), .45) * (.5 + .5 * Math.cos((y - .05) / .085 * TAU)); // abs rows
+      k -= .035 * gauss(angDiff(th, 0), .05) * smooth(.02, .1, y) * smooth(.36, .3, y);                         // centre line
+      k += .08 * side * gauss(y - .3, .08);                                                                    // lats
+      k += .07 * back * gauss(Math.abs(angDiff(th, Math.PI)) - .48, .25) * gauss(y - .42, .06);                 // shoulder blades
+      k -= .05 * gauss(angDiff(th, Math.PI), .07) * smooth(.04, .12, y) * smooth(.56, .48, y);                 // spine groove
+      k += .1 * gauss(Math.abs(Math.abs(angDiff(th, 0)) - Math.PI / 2) - 1.0, .4) * gauss(y - .55, .035);      // traps
+      return k;
+    }, 1.42, .82);
+  add(spine, torso, marble);
+  // deltoids sit on the torso, so the shoulders always look capped
+  for (const s of [-1, 1]) add(spine, ellip(.1, .085, .085), marble, s * .265, .48, 0);
+  // the drapery over the left shoulder, diagonally across chest and back to the right hip
+  {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.33, -.02, -.12), new THREE.Vector3(.1, .2, -.2), new THREE.Vector3(-.15, .45, -.16), new THREE.Vector3(-.27, .56, 0),
+      new THREE.Vector3(-.15, .45, .17), new THREE.Vector3(.1, .2, .2), new THREE.Vector3(.33, -.02, .12),
+    ], true);
+    const N = 120, W = .085, pos = [], idx = [], tmp = new THREE.Vector3(), out = new THREE.Vector3(), bn = new THREE.Vector3();
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = curve.getPointAt(t), tg = curve.getTangentAt(t);
+      out.set(p.x, 0, p.z).normalize(); bn.crossVectors(tg, out).normalize();
+      const fold = .012 * Math.sin(t * 60), w = W * (1 + .25 * Math.sin(t * TAU * 2));
+      for (const e of [-1, 1]) { tmp.copy(p).addScaledVector(out, .03 + fold).addScaledVector(bn, e * w); pos.push(tmp.x, tmp.y, tmp.z); }
+      if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    add(spine, geo, cloth);
+    // a gold brooch where it pins at the shoulder
+    add(spine, new THREE.CylinderGeometry(.03, .03, .012, 16), gold, -.25, .55, -.06).rotation.x = Math.PI / 2;
+  }
+  // a crimson cloak pinned at the left shoulder, hanging down his back; it ripples as he climbs
+  {
+    const cw = 10, ch = 14, geo = new THREE.PlaneGeometry(.34, .95, cw, ch);
+    geo.translate(0, -.475, 0);
+    const base = geo.attributes.position.array.slice();
+    const capeM = add(spine, geo, cloth, -.08, .56, .2); capeM.rotation.x = .12; capeM.rotation.z = .1;
+    P.cape = { geo, base, cw, ch };
+    add(spine, new THREE.CylinderGeometry(.032, .032, .014, 16), gold, -.2, .56, .14).rotation.x = Math.PI / 2;
+  }
+  // --- neck and head
+  add(spine, lathe([[.71, .055], [.66, .058], [.6, .07], [.56, .085]], 16, (th, y) => .06 * gauss(Math.abs(angDiff(th, 0)) - .5, .3)), marble);
+  const head = joint(spine, 0, .76, 0); J.head = head;
+  const skull = ellip(.098, .118, .112, 28, 22);
+  { // jaw narrower, brow forward, a straight Greek nose
+    const p = skull.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      if (y < -.02) { const k = 1 - .25 * smooth(-.02, -.12, y); x *= k; z = z < 0 ? z * (1 - .1 * smooth(-.02, -.12, y)) : z * k; }
+      if (z < -.08 && y > .0 && y < .05) z -= .012 * gauss(x, .05);
+      p.setXYZ(i, x, y, z);
+    }
+    skull.computeVertexNormals();
+  }
+  add(head, skull, marble);
+  add(head, new THREE.ConeGeometry(.018, .05, 4), marble, 0, -.005, -.115).rotation.x = -Math.PI / 2 - .25;
+  // curls: hair over the crown and back, a full beard
+  const curl = new THREE.IcosahedronGeometry(1, 1), R = mulberry(41);
+  for (let i = 0; i < 120; i++) {
+    const th = R() * TAU, ph = R() * 1.3;
+    const fwd = Math.cos(th) < 0 ? 1 : 0;
+    if (fwd && ph > .9) continue; // keep the forehead clear
+    const dir = new THREE.Vector3(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th));
+    const m = add(head, curl, marbleDk, dir.x * .104, dir.y * .118 + .006, dir.z * .112); m.scale.set(.018 + R() * .006, .013, .018 + R() * .006); m.lookAt(m.position.clone().multiplyScalar(2).add(head.position)); m.castShadow = false;
+  }
+  for (let i = 0; i < 60; i++) {
+    const a = (R() - .5) * 2.2, y = -.035 - R() * .095;
+    const r = .095 * (1 - .4 * smooth(-.03, -.13, y));
+    const m = add(head, curl, marbleDk, Math.sin(a) * r, y, -Math.cos(a) * r * .95 - .006); m.scale.set(.016 + R() * .006, .02, .014); m.castShadow = false;
+  }
+  // gold laurel wreath
+  const wreathG = joint(head, 0, .045, .005); wreathG.rotation.x = -.18;
+  add(wreathG, new THREE.TorusGeometry(.118, .005, 6, 32), gold).rotation.x = Math.PI / 2;
+  const leafG = ellip(.012, .004, .03, 8, 6);
+  for (let i = 0; i < 26; i++) {
+    const a = (i / 26) * TAU; if (Math.cos(a) < -.85) continue; // gap at the front
+    for (const e of [-1, 1]) {
+      const m = add(wreathG, leafG, gold, Math.sin(a) * .12, .008 * e, Math.cos(a) * .12);
+      m.rotation.set(e * .5, a + Math.PI / 2, e * .4); m.castShadow = false;
+    }
+  }
+  // --- arms: deltoid, biceps/triceps, forearm, gold cestus on the punching hand
+  for (const s of [-1, 1]) {
+    const sh = joint(spine, s * .27, .45, 0); J['sh' + s] = sh;
+    add(sh, lathe([[.02, .084], [-.06, .083], [-.14, .078], [-.22, .066], [-.29, .055], [-.32, .052]], 22,
+      (th, y) => .16 * gauss(angDiff(th, 0), .6) * gauss(y + .15, .06) + .12 * gauss(Math.abs(angDiff(th, Math.PI)), .7) * gauss(y + .1, .07)), marble);
     const el = joint(sh, 0, -.31, 0); J['el' + s] = el;
-    add(el, new THREE.SphereGeometry(.068, 10, 8), marble);
-    add(el, cap(.064, .16), marble, 0, -.13, 0);
-    if (s > 0) { // the punching fist: a steel gauntlet with a charge ring
-      add(el, new THREE.CylinderGeometry(.085, .075, .17, 14), steel, 0, -.2, 0);
-      add(el, new THREE.SphereGeometry(.095, 12, 10), steel, 0, -.31, 0);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(.088, .014, 6, 20), glowM); ring.rotation.x = Math.PI / 2; ring.position.y = -.2; el.add(ring);
-      const ring2 = ring.clone(); ring2.position.y = -.14; el.add(ring2);
-    } else {
-      add(el, new THREE.CylinderGeometry(.08, .07, .2, 12), leather, 0, -.13, 0); // leather bracer (the blocking arm)
-      add(el, new THREE.SphereGeometry(.075, 10, 8), marble, 0, -.3, 0);
+    add(el, ellip(.055, .05, .055), marble);
+    add(el, lathe([[.01, .056], [-.05, .066], [-.12, .057], [-.2, .044], [-.26, .037], [-.28, .036]], 22,
+      (th, y) => .12 * gauss(angDiff(th, s * .9), .6) * gauss(y + .05, .05)), marble);
+    if (s > 0) { // the punching hand: a gold-wrapped fist (a cestus) with charge rings
+      add(el, ellip(.06, .058, .068), gold, 0, -.32, -.006);
+      for (const y of [-.2, -.235, -.27]) add(el, new THREE.TorusGeometry(.04, .009, 6, 18), gold, 0, y, 0).rotateX(Math.PI / 2);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.068, .012, 6, 22), glowM); ring.rotation.x = Math.PI / 2; ring.position.y = -.3; el.add(ring);
+      const ring2 = ring.clone(); ring2.position.y = -.25; el.add(ring2);
+    } else { // the guarding arm: a leather bracer with a gold band
+      add(el, lathe([[-.08, .046], [-.14, .047], [-.21, .041], [-.25, .038]], 16), leather);
+      add(el, new THREE.TorusGeometry(.046, .007, 6, 18), gold, 0, -.09, 0).rotateX(Math.PI / 2);
+      add(el, ellip(.045, .055, .062), marble, 0, -.31, -.004);
+      add(sh, new THREE.TorusGeometry(.068, .01, 6, 20), gold, 0, -.12, 0).rotateX(Math.PI / 2); // arm ring
     }
   }
   scene.add(g);
@@ -708,6 +834,15 @@ function poseFigure(dt, t, sp) {
   if (P.cheer > 0) { const k = Math.min(1, P.cheer * 3); shLx = lerp(shLx, 2.9, k); shLz = lerp(shLz, -.2, k); elL = lerp(elL, .2, k); }
   J['sh-1'].rotation.set(shLx, 0, shLz); J['el-1'].rotation.x = elL;
   P.block = Math.max(0, P.block - dt * 2.5);
+  if (P.cape) { // cloak ripple: more as he walks faster or punches
+    const { geo, base, cw } = P.cape, p = geo.attributes.position.array, amp = .03 + sp * .006 + ext * .05;
+    for (let i = 0; i < p.length; i += 3) {
+      const y = base[i + 1], k = -y / .95, col = (i / 3) % (cw + 1);
+      p[i] = base[i] + Math.sin(t * 3 + y * 6 + col) * .01 * k;
+      p[i + 2] = base[i + 2] + k * k * (.18 + .06 * c) + Math.sin(t * 5.5 - y * 9 + col * .5) * amp * k + Math.sin(ph) * .03 * k;
+    }
+    geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
+  }
   P.glowM.opacity = c * .95 + ext * .8;
   P.glowM.color.setRGB(1, .55 + c * .3, .2 + c * .3);
 }
@@ -1323,7 +1458,7 @@ function update(dt) {
 }
 
 // ---------------------------------------------------------------- visuals per frame
-const lookAt = new THREE.Vector3(), scrA = new THREE.Vector3(), scrB = new THREE.Vector3();
+const lookAt = new THREE.Vector3(), scrA = new THREE.Vector3(), scrB = new THREE.Vector3(), scrC = new THREE.Vector3();
 const NIGHT_TOP = new THREE.Color(0x060a18), NIGHT_HOR = new THREE.Color(0x2b3956), DAWN_TOP = new THREE.Color(0x24375c), DAWN_HOR = new THREE.Color(0xf2a36e);
 const CLOUD_NIGHT = new THREE.Color(0x2a3246), CLOUD_DAWN = new THREE.Color(0xf3d2c0);
 const MOON_COL = new THREE.Color(0xdfe8ff), SUN_COL = new THREE.Color(0xffc796), HEMI_NIGHT = new THREE.Color(0x9fb4d8), HEMI_DAWN = new THREE.Color(0xffd6b8);
@@ -1356,9 +1491,10 @@ function render(dt, t) {
   P.yaw = lerp(P.yaw, -Math.atan(xcp(P.d)) - clamp((P.toff - P.off) * .04, -.25, .25), 1 - Math.exp(-8 * dt));
   g.rotation.set(0, P.yaw, 0);
   // see-through when the boulder is behind him from the camera's point of view
-  scrA.copy(ball.p).project(camera); scrB.copy(P.p).setY(P.p.y + 1.8).project(camera);
-  const behind = Math.abs(scrA.x - scrB.x) < .28 && Math.abs(scrA.y - scrB.y) < .45 && camera.position.distanceToSquared(ball.p) > camera.position.distanceToSquared(P.p);
-  P.fade = lerp(P.fade, behind ? .45 : 1, 1 - Math.exp(-10 * dt));
+  // (only when the boulder's centre is actually inside his outline on screen)
+  scrA.copy(ball.p).project(camera); scrB.copy(P.p).project(camera); scrC.copy(P.p).setY(P.p.y + 3.4).project(camera);
+  const behind = Math.abs(scrA.x - scrB.x) < .16 && scrA.y > scrB.y && scrA.y < scrC.y && camera.position.distanceToSquared(ball.p) > camera.position.distanceToSquared(P.p);
+  P.fade = lerp(P.fade, behind ? .5 : 1, 1 - Math.exp(-10 * dt));
   for (const m of figMats) { m.opacity = P.fade; m.depthWrite = P.fade > .95; }
   const gap = ballGap();
   const inReach = gap < reachNow() && -ball.p.z > P.d - .4 && !ball.lost;
@@ -1393,7 +1529,7 @@ function render(dt, t) {
   stepParts(dt); stepDust(dt); stepPops(dt);
   // camera: low and close behind the crawler, eases back as you wind up, kicks on impact
   cam.kick = Math.max(0, cam.kick - dt * 4);
-  const back = 7.2 + c * 1.1 - cam.kick * .6, up = 4.9 + c * .35, ahead = 18;
+  const back = 6.7 + c * 1.1 - cam.kick * .6, up = 4.8 + c * .35, ahead = 18;
   const cd = P.d - back;
   const tx = xc(cd) + P.off * .9 + 1.5, ty = Math.max(H(cd), H(P.d) - 1.2) + up;
   cam.x = lerp(cam.x, tx, 1 - Math.exp(-9 * dt));
@@ -1408,6 +1544,7 @@ function render(dt, t) {
   camera.position.set(cam.x + rnd(-1, 1) * sh, cam.y + rnd(-1, 1) * sh, cam.z);
   lookAt.set(cam.lookX, cam.lookY, -(P.d + ahead));
   camera.lookAt(lookAt);
+  if (window.__camOverride) { const o = window.__camOverride; camera.position.set(P.p.x + o[0], P.p.y + o[1], P.p.z + o[2]); camera.lookAt(P.p.x, P.p.y + o[3], P.p.z); }
   // the climb: dawn comes up as you gain height, the clouds end up below you, the ranges fall away
   const alt = camera.position.y, dawn = smooth(20, 300, alt);
   skyUni.top.value.copy(NIGHT_TOP).lerp(DAWN_TOP, dawn);
@@ -1419,7 +1556,7 @@ function render(dt, t) {
   sunDisc.material.opacity = smooth(.1, .4, dawn);
   stars.material.opacity = .8 * (1 - smooth(.2, .75, dawn));
   sun.color.copy(MOON_COL).lerp(SUN_COL, dawn); sun.intensity = 1.9 + dawn * .8;
-  sun.position.set(camera.position.x - 14 - dawn * 6, camera.position.y + 26 - dawn * 12, camera.position.z - 6 - dawn * 20);
+  sun.position.set(camera.position.x - 16, camera.position.y + 24 - dawn * 8, camera.position.z + 16 - dawn * 10); // key light from behind the camera so his back and the road get real shading
   sun.target.position.set(camera.position.x, camera.position.y - 5, camera.position.z - 16);
   hemi.color.copy(HEMI_NIGHT).lerp(HEMI_DAWN, dawn * .6); hemi.intensity = .75 + dawn * .35;
   far.position.set(camera.position.x, 0, camera.position.z);

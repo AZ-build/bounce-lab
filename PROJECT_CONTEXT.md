@@ -14,7 +14,7 @@
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
 | rebound | Rebound | v3 Striker | v1–v3 | Session 2: 3D Rocket-League-style striker (three.js bundled inline) |
 | ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
-| summit | Summit | v4 Sisyphus | v1–v4 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
+| summit | Summit | v5 The God | v1–v5 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
 
 ## How a game plugs in
 - One script tag: `<script src="../../lab/lab.js" data-game="<id>" data-version="vN">`
@@ -58,11 +58,11 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Every new version: keep the old file in `versions/`, update `games.js`
 - Phone-first; lab UI stops touches from reaching the game
 
-## Summit notes (v4)
-- Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v4.html. Older versions in versions/ are frozen archives
+## Summit notes (v5)
+- Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v5.html. Older versions in versions/ are frozen archives
 - Tuning: `CFG` (gravity, boulder size/mass, crawler size, drive speed per stage, charge time, throw power range, reach, cloud height) and `STAGES` at the top of main.js. Advantages are in `PERKS`
 - The road: `H(d)` road height at distance d (d = -z), `xc(d)` winding centre line, `G(d, x)` ground anywhere (banked road, `cliffY` on the left, `dropY` berm + drop on the right, ridge drop-off in Ridge stages). Crevasses from `gapsFor(stage)` (seeded; a landing ledge follows each gap)
-- Sisyphus: built from primitives in the IIFE after the boulder, joints in `J` (hips, spine, head, sh±1, el±1, hip±1, knee±1), root scaled ×2. `poseFigure()` blends walk / wind-up (`P.charge`) / punch (`P.release`) / guard (`P.guard`) / block (`P.block`) / cheer. Collision is an upright capsule (`CFG.bodyR`, `CFG.bodyH`)
+- Sisyphus: sculpted with `lathe(profile, segs, bump)` (turned shapes with muscle bumps) in the IIFE after the boulder; marble uses a fresnel rim added via `onBeforeCompile`; cloak vertices animated in `poseFigure()`; joints in `J` (hips, spine, head, sh±1, el±1, hip±1, knee±1), root scaled ×2. `poseFigure()` blends walk / wind-up (`P.charge`) / punch (`P.release`) / guard (`P.guard`) / block (`P.block`) / cheer. Collision is an upright capsule (`CFG.bodyR`, `CFG.bodyH`)
 - Controls: one pointer; `pointerdown` → `beginCharge()`, move → steer `P.toff`, `pointerup` → `endCharge()` → `strike()`. Holding when the boulder arrives = block
 - Performance rules: never add/remove lights at runtime; reuse shared geometries (`SHARED_GEOS` are never disposed); new world pieces go through `queue()` / `doWork()`; new object types should be added to the warm-up block so their shaders compile behind the title screen
 - Test hook: `window.__summit` (state, `update()`, `strike()`, `offerPerks()`, `takePerk()`, `doWork()`, `buildStage()`, `buildChunk()`)

@@ -143,8 +143,8 @@ window.BOUNCE_LAB_GAMES = [
     "controls": "Hold anywhere to wind up, slide to steer, let go to punch",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v4",
-    "versionName": "Sisyphus",
+    "version": "v5",
+    "versionName": "The God",
     "added": "2026-11-22",
     "updated": "2026-11-22",
     "status": "prototype",
@@ -168,6 +168,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v4",
         "name": "Sisyphus",
         "file": "versions/v4.html"
+      },
+      {
+        "v": "v5",
+        "name": "The God",
+        "file": "versions/v5.html"
       }
     ]
   }

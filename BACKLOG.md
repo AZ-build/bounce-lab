@@ -18,7 +18,7 @@
 ## Game backlogs
 See each game's own notes in the Bouncer project docs (claude/bouncer-*.md).
 
-## Smashball (id rebound, v4 Goal)
+## Smashball (v4 Goal)
 - [ ] Adrian plays it on his phone; tune camera distance, joystick feel, smash window and bot speed from that
 - [ ] Power-ups (ideas): spawn on the floor every ~20 s. Boost (speed burst), Magnet (ball sticks to you for a moment), Big Foot (striker grows), Freeze (bot stalls), Multi-ball
 - [ ] Difficulty picker (Rookie / Pro / Lab Rat) or a ladder where each win makes the bot better

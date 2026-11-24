@@ -13,7 +13,7 @@ Bounce Lab/
 │   ├── bouncer/          Side-scroller between two platforms
 │   │   ├── index.html    Current version (v6), connected to the lab
 │   │   └── versions/     v1–v6, every version kept and playable
-│   ├── rebound/          Smashball: 1v1 arena striker (v1–v4, source in src/)
+│   ├── smashball/        Smashball (was Rebound): 1v1 arena striker (v1–v4, source in src/)
 │   ├── ascent/           Vertical neon climber (v1–v5)
 │   └── _template/        Starter for new games (a tiny keepy-uppy game)
 ├── lab/

@@ -64,7 +64,7 @@ window.BOUNCE_LAB_GAMES = [
     ]
   },
   {
-    "id": "rebound",
+    "id": "smashball",
     "title": "Smashball",
     "tagline": "1v1 arena striker",
     "description": "Run your striker at a heavy ball, smash it past the bot and guard your own goal. 2-minute matches",

@@ -19,7 +19,7 @@
 - v6 kept at versions/v6.html
 
 ## [Smashball v4 "Goal"] - 2026-11-23
-- **Rebound is now Smashball.** The game id and link stay `games/rebound/`, so old links, scores and analytics keep working
+- **Rebound is now Smashball**, with a new link: `games/smashball/` (game id `smashball`). The old `games/rebound/` link redirects there. Scores, best score and sound setting start fresh under the new name (nobody had played it yet)
 - Rebuilt from scratch as real source (`games/rebound/src/`, same toolkit as Summit) instead of the old sealed bundle
 - 1v1 against a bot in a concrete-and-glass lab arena: you defend the cyan goal, the bot defends the magenta one. 2-minute match; tied at full time = golden goal
 - The rings are gone. The point is the goal
@@ -31,7 +31,7 @@
 - Bot: gets behind the ball and drives it at your goal, loops round when it's on the wrong side, rushes back when you shoot, smashes when lined up. Speeds up a little when you're winning and late in the match
 - Goal celebration when you score: slow-mo, your striker turns gold and does three hops with two full spins, a gold shockwave rings across the floor, seven fireworks launch off the goal posts, confetti pops over your head, the camera swings round to watch, your score number bumps on the scoreboard, a cheer line ("Top corner!", "Unstoppable!"…) and a bigger fanfare
 - Look matches the lobby: little bloom or haze, formwork-concrete hall with thin neon tubes and recessed ceiling lights, brushed-steel goal frames with a thin neon line. Screens use Tilt Neon sign lettering, Chakra Petch, a steel-bezel scoreboard, a steel round mute button and the neon-rimmed pill button
-- Scoring: goal 100 (smash goal 150), save 30 (touching the ball away when it was heading into your net), win +250. Best saved as `rebound-best-v4`
+- Scoring: goal 100 (smash goal 150), save 30 (touching the ball away when it was heading into your net), win +250. Best saved as `smashball-best-v4`
 - v3 kept at versions/v3.html
 - Lab: the hidden toast no longer peeks out as a dark pill at the top centre of every game (lab.css). Game pages now load lab.js?v=1.8.2
 

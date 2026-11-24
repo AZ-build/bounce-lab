@@ -1,4 +1,4 @@
-// SMASHBALL (game id "rebound", v4 "Goal") — a 1v1 arena striker for Bounce Lab.
+// SMASHBALL v4 "Goal" (was Rebound) — a 1v1 arena striker for Bounce Lab.
 // You are a tall steel striker in a concrete-and-glass lab arena. The camera sits close
 // behind you and always swings to keep the ball in view. Drag anywhere to run (up = toward
 // the ball), tap to jump + smash. A bot striker attacks your goal. Heavy ball, 2-minute match.
@@ -377,7 +377,7 @@ function stepPops(dt) {
 }
 
 // ---------------------------------------------------------------- sound
-let ac = null, master = null, noiseBuf = null, muted = store.get('rebound-muted', false), rollOsc = null, rollGain = null;
+let ac = null, master = null, noiseBuf = null, muted = store.get('smashball-muted', false), rollOsc = null, rollGain = null;
 function audio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
   try {
@@ -434,7 +434,7 @@ const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} 
 // ---------------------------------------------------------------- game state
 let mode = 'title';           // title | play | over
 const S = { phase: 'kickoff', phaseT: 0, clock: CFG.matchTime, golden: false, gy: 0, gb: 0, pts: 0, touches: 0, smashes: 0, saves: 0, fastest: 0, smashGoals: 0,
-  hitstop: 0, slow: 1, slowT: 0, shake: 0, best: store.get('rebound-best-v4', 0), countdown: 0, tapped: false, autoplay: false };
+  hitstop: 0, slow: 1, slowT: 0, shake: 0, best: store.get('smashball-best-v4', 0), countdown: 0, tapped: false, autoplay: false };
 
 // ---------------------------------------------------------------- physics
 const tmp = V(), tmp2 = V(), nrm = V();
@@ -722,7 +722,7 @@ function start() {
   window.BounceLab && BounceLab.start();
   $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide');
   kickoff();
-  const plays = store.get('rebound-plays-v4', 0); store.set('rebound-plays-v4', plays + 1);
+  const plays = store.get('smashball-plays-v4', 0); store.set('smashball-plays-v4', plays + 1);
   S.tapped = plays >= 2;
   hint(S.tapped ? '' : '<b>Drag</b> to run at the ball · <b>tap</b> to jump + smash');
   hud();
@@ -759,7 +759,7 @@ function endMatch() {
   const won = S.gy > S.gb;
   if (won) S.pts += 250;
   const score = S.pts, isBest = score > S.best;
-  if (isBest) { S.best = score; store.set('rebound-best-v4', score); }
+  if (isBest) { S.best = score; store.set('smashball-best-v4', score); }
   (won ? sfx.win : sfx.lose)();
   $('#oResult').textContent = won ? 'You win' : 'Bot wins';
   $('#oResult').style.setProperty('--n', won ? '#ffc23a' : '#ff3fb4');
@@ -844,7 +844,7 @@ $('#againBtn').addEventListener('click', start);
 const ICON_ON = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
 function muteIcon() { $('#mute').innerHTML = muted ? ICON_OFF : ICON_ON; $('#mute').classList.toggle('off', muted); }
-$('#mute').addEventListener('click', () => { muted = !muted; store.set('rebound-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; });
+$('#mute').addEventListener('click', () => { muted = !muted; store.set('smashball-muted', muted); muteIcon(); if (master) master.gain.value = muted ? 0 : .55; });
 muteIcon();
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
 document.addEventListener('visibilitychange', () => { if (document.hidden) joyEnd(); });
@@ -1057,4 +1057,4 @@ function frame(now) {
   composer.render();
 }
 requestAnimationFrame(frame);
-window.__rebound = { S, P, B, ball, CFG, CEL, start, tap, update, think, camera, stick, cameraUpdate, scored, get mode() { return mode; } };
+window.__smashball = { S, P, B, ball, CFG, CEL, start, tap, update, think, camera, stick, cameraUpdate, scored, get mode() { return mode; } };

@@ -54,7 +54,7 @@ Claude puts it in `lab/config.js` and pushes the update. Then demo mode turns of
 2. Your site code is the first part of your dashboard address. For `https://bouncelab.goatcounter.com`, the code is `bouncelab`. A new site just for Bounce Lab keeps its numbers separate from your other projects.
 3. Send Claude the code, or put it in `lab/config.js` → `goatcounter: "bouncelab"`.
 
-It records page views for the lobby and each game, plus events such as `ascent/start`, `ascent/gameover`, `bouncer/rate-5`, `rebound/share-score`, `ascent/challenge-won` and `lobby/play-ascent`.
+It records page views for the lobby and each game, plus events such as `ascent/start`, `ascent/gameover`, `bouncer/rate-5`, `smashball/share-score`, `ascent/challenge-won` and `lobby/play-ascent`.
 
 ---
 
@@ -64,7 +64,7 @@ https://az-build.github.io/bounce-lab/admin/ is not linked anywhere, so bookmark
 **Status (Nov 22):** all four Firebase steps done and tested live. Scores, plays, ratings and feedback save, and the rules block faked numbers.
 
 ## Sharing
-- **Each game has its own link:** `https://az-build.github.io/bounce-lab/games/ascent/` (or `bouncer`, `rebound`). Pasted into iMessage, Slack, Discord, X and similar apps, it shows a preview card with the game's art.
+- **Each game has its own link:** `https://az-build.github.io/bounce-lab/games/ascent/` (or `bouncer`, `smashball`, `summit`). Pasted into iMessage, Slack, Discord, X and similar apps, it shows a preview card with the game's art.
 - **Lobby card link:** `https://az-build.github.io/bounce-lab/#ascent` opens the lobby with that game's card showing.
 - **Challenge link:** after a run, the share button sends `.../games/ascent/?vs=1234&by=Adrian`. Whoever opens it sees "Adrian scored 1,234. Beat it!" and is told whether they beat it.
 

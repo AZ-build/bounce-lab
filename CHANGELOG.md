@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [Summit v6 "The Statue"] - 2026-11-23
+- Sisyphus is now one smooth sculpted marble body instead of joined cylinders: muscles, shoulders, neck, knees and elbows flow into each other like a carved statue, and the skin bends with his joints as he moves
+- How it works: the body is sculpted from blended rounded shapes, turned into a single mesh when the game is built, packed small (about 325 KB), and attached to a skeleton so it bends naturally. The cloak is gone so his back muscles show
+- New animation:
+  - Walk: a real stride with knee bend, heel-to-toe, hip sway and counter-swinging arms, leaning into the slope
+  - Wind-up: he coils, turning hips and shoulders away and cocking the fist back
+  - Punch: hips fire first, then shoulders, then the arm, with a lunge step and follow-through. The guard hand pulls to the chin
+  - Block brace, a stumble when bonked, a fist raise on a PERFECT, and a tucked leap over gaps
+- New ground: a natural gravel texture with pebbles, hairline cracks and real bumps under the light (replaces the flat noisy pattern)
+- Crevasses are easier: each one now has a steel plank bridge on one side (Sisyphus walks over it and the boulder rolls across) and a launch ramp on the other side that kicks a rolling boulder over the gap
+- v5 kept at versions/v5.html
+
 ## [Summit v5 "The God"] - 2026-11-23
 - Sisyphus re-sculpted as a Greek statue come to life (same rig and moves as v4):
   - Shaped anatomy instead of tubes: V-tapered torso with pecs, abs, lats, shoulder blades, spine groove and traps; capped deltoids; biceps/triceps, forearms, quads, kneecaps and calves

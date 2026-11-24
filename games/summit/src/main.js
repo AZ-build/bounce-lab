@@ -1,4 +1,4 @@
-// SUMMIT v5 "The God" — a Sisyphus game for Bounce Lab.
+// SUMMIT v6 "The Statue" — a Sisyphus game for Bounce Lab.
 // Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
 // endless mountain road, hurling a giant boulder ahead and smashing it again when it
 // rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { BONES as BODY_BONES, BONE_NAMES as BODY_BONE_NAMES } from './sdfbody.mjs';
 
 // ---------------------------------------------------------------- tuning
 const CFG = {
@@ -68,12 +69,24 @@ function gapsFor(k) {
     while (d < base + L - 30) {
       if (R() < st.gaps) {
         const w = Math.min(7.5, 3.5 + Math.min(k, 8) * .35 + R() * 1.6);
-        out.push({ d0: d, d1: d + w });
+        const hw = st.ridge ? CFG.ridgeHw : CFG.hw, side = R() < .5 ? -1 : 1;
+        // b0..b1: a plank bridge on one side; r0..r1: a launch ramp on the other (offsets from the road centre)
+        const b = [side * (hw - 3.8), side * hw], r = [-side * (hw - .2), -side * 1.3];
+        out.push({ d0: d, d1: d + w, b0: Math.min(...b), b1: Math.max(...b), r0: Math.min(...r), r1: Math.max(...r) });
         d += w + 30 + R() * 14;
       } else d += 18 + R() * 12;
     }
   }
   gapCache.set(k, out); return out;
+}
+const RAMP_L = 7, RAMP_H = 2.4;
+const onBridge = (g, off) => off > g.b0 + .1 && off < g.b1 - .1;
+const bridgeY = (g, d, x) => lerp(G(g.d0, x), G(g.d1, x), clamp((d - g.d0) / (g.d1 - g.d0), 0, 1)) + .14;
+function openGap(d, x) { const g = inGap(d); return g && !onBridge(g, x - xc(d)) ? g : null; }
+function rampAt(d, off) {
+  for (const k of new Set([stageAt(d), stageAt(d + RAMP_L)])) for (const g of gapsFor(k))
+    if (d > g.d0 - RAMP_L && d < g.d0 && off > g.r0 && off < g.r1) return g;
+  return null;
 }
 function inGap(d) { for (const g of gapsFor(stageAt(d))) if (d > g.d0 && d < g.d1) return g; return null; }
 function nearGap(d, m) { for (const k of new Set([stageAt(d - m), stageAt(d + m)])) for (const g of gapsFor(k)) if (d > g.d0 - m && d < g.d1 + m) return true; return false; }
@@ -321,8 +334,58 @@ const clouds = [0, 7].map((dy, i) => {
 });
 
 // ---------------------------------------------------------------- terrain
-const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: groundMap, bumpMap: groundBump, bumpScale: 1.4, roughness: .96, metalness: 0 });
-groundMat.map.repeat.set(1 / 7, 1 / 7); groundMat.bumpMap.repeat.set(1 / 7, 1 / 7);
+// natural ground: layered noise for dirt and rock, shaded pebbles and grit, a few cracks, plus a matching normal map
+function groundTextures(S = 512) {
+  const R = mulberry(9), lat = (n) => { const a = new Float32Array(n * n); for (let i = 0; i < a.length; i++) a[i] = R(); return a; };
+  const noise = (n) => { // tileable value noise sampled at S x S
+    const L = lat(n), out = new Float32Array(S * S), f = n / S;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const gx = x * f, gy = y * f, ix = Math.floor(gx), iy = Math.floor(gy), tx = gx - ix, ty = gy - iy;
+      const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty), x1 = (ix + 1) % n, y1 = (iy + 1) % n;
+      const a = L[ix + iy * n], b = L[x1 + iy * n], c = L[ix + y1 * n], d = L[x1 + y1 * n];
+      out[x + y * S] = a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+    }
+    return out;
+  };
+  const o1 = noise(4), o2 = noise(8), o3 = noise(16), o4 = noise(32), o5 = noise(64), o6 = noise(128);
+  const hgt = new Float32Array(S * S), col = new Float32Array(S * S);
+  for (let i = 0; i < S * S; i++) {
+    const f = o1[i] * .35 + o2[i] * .25 + o3[i] * .17 + o4[i] * .11 + o5[i] * .07 + o6[i] * .05;
+    hgt[i] = f * .7; col[i] = .52 + (f - .5) * .55 + (o5[i] - .5) * .12;
+  }
+  // pebbles and grit: little domes, each a slightly different shade
+  const stamp = (cx, cy, r, h, tone) => {
+    const r2 = r * r;
+    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+      const d2 = x * x + y * y; if (d2 > r2) continue;
+      const px = ((cx + x) % S + S) % S, py = ((cy + y) % S + S) % S, i = px + py * S, k = 1 - d2 / r2;
+      hgt[i] = Math.max(hgt[i], hgt[i] * .5 + Math.sqrt(k) * h);
+      col[i] = col[i] * (1 - k * .8) + tone * k * .8;
+    }
+  };
+  for (let i = 0; i < 700; i++) { const r = 2 + Math.floor(R() * R() * 8); stamp(Math.floor(R() * S), Math.floor(R() * S), r, .22 + r * .025, .5 + R() * .3); }
+  for (let i = 0; i < 4000; i++) stamp(Math.floor(R() * S), Math.floor(R() * S), 1, .1, .45 + R() * .3);
+  // a few hairline cracks
+  for (let k = 0; k < 14; k++) {
+    let x = R() * S, y = R() * S, a = R() * 6.28;
+    for (let s = 0; s < 70; s++) { a += (R() - .5) * .7; x += Math.cos(a) * 2; y += Math.sin(a) * 2; const i = (((x | 0) % S + S) % S) + (((y | 0) % S + S) % S) * S; hgt[i] -= .12; col[i] *= .7; }
+  }
+  const c1 = document.createElement('canvas'), c2 = document.createElement('canvas'); c1.width = c1.height = c2.width = c2.height = S;
+  const x1 = c1.getContext('2d'), x2 = c2.getContext('2d'), im1 = x1.createImageData(S, S), im2 = x2.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = x + y * S, l = hgt[((x - 1 + S) % S) + y * S], r = hgt[((x + 1) % S) + y * S], u = hgt[x + ((y - 1 + S) % S) * S], d = hgt[x + ((y + 1) % S) * S];
+    const nx = (l - r) * 6, ny = (d - u) * 6, nz = 1, nl = Math.hypot(nx, ny, nz);
+    const ao = clamp(.75 + hgt[i] * .6, .5, 1.1), v = clamp(col[i] * ao, 0, 1) * 255;
+    im1.data.set([v * 1.02, v, v * .96, 255], i * 4);
+    im2.data.set([(nx / nl * .5 + .5) * 255, (ny / nl * .5 + .5) * 255, (nz / nl * .5 + .5) * 255, 255], i * 4);
+  }
+  x1.putImageData(im1, 0, 0); x2.putImageData(im2, 0, 0);
+  const map = tex(c1), nmap = tex(c2, 1, false);
+  return { map, nmap };
+}
+const GT = groundTextures();
+const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: GT.map, normalMap: GT.nmap, normalScale: new THREE.Vector2(1.3, 1.3), roughness: .95, metalness: 0 });
+groundMat.map.repeat.set(1 / 5, 1 / 5); groundMat.normalMap.repeat.set(1 / 5, 1 / 5);
 const crevMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0f, roughness: 1, side: THREE.DoubleSide });
 const lipMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .5, .25).multiplyScalar(1.15) });
 const abyssMat = new THREE.MeshBasicMaterial({ map: glowTex, color: new THREE.Color(1, .3, .1).multiplyScalar(.22), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -403,7 +466,7 @@ function buildChunk(c) {
     const nrmA = g.attributes.normal, col = new Float32Array(nrmA.count * 3);
     for (let i = 0; i < nrmA.count; i++) {
       const u = meta[i * 2], y = meta[i * 2 + 1], ny = nrmA.getY(i);
-      const flat = smooth(.55, .85, ny), n = (Math.sin(pos[i * 3] * 1.7 + pos[i * 3 + 2] * .9) + Math.sin(y * .9)) * .05;
+      const flat = smooth(.55, .85, ny), n = (Math.sin(pos[i * 3] * .31 + pos[i * 3 + 2] * .23) + Math.sin(y * .4)) * .025;
       if (u <= 0) tmpC.copy(C_ROAD).lerp(C_DIRT, .3 * grassAt(y)).lerp(C_SNOW, snowAt(y) * .35);
       else {
         tmpC.copy(C_ROCK1).lerp(C_ROCK2, .5 + .5 * Math.sin(y * .8 + u * .1));
@@ -446,6 +509,29 @@ function buildChunk(c) {
         lamp.scale.setScalar(1.6); lamp.position.set(bx, by + 1.75, -ld + .4); grp.add(lamp); blinkers.push(lamp);
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(.14, 8, 6), lipMat); bulb.position.copy(lamp.position); grp.add(bulb);
       }
+    }
+    { // the plank bridge: a steel deck with rails
+      const bw = g.b1 - g.b0, cx = xc(mid) + (g.b0 + g.b1) / 2, len = g.d1 - g.d0 + 1.4;
+      const y0 = G(g.d0, cx), y1 = G(g.d1, cx), ang = Math.atan2(y1 - y0, g.d1 - g.d0), my = (y0 + y1) / 2 + .02;
+      const br = new THREE.Group(); br.position.set(cx, my, -mid); br.rotation.x = ang; grp.add(br);
+      const deck = boxMesh(bw, .26, len, slabMat); deck.receiveShadow = true; deck.castShadow = true; br.add(deck);
+      for (const e of [-1, 1]) {
+        const strip = boxMesh(.25, .04, len, hazardMat); strip.position.set(e * (bw / 2 - .13), .15, 0); br.add(strip);
+        const rail = boxMesh(.08, .08, len, slabMat); rail.position.set(e * (bw / 2 - .05), 1.0, 0); br.add(rail);
+        for (const z of [-len / 2 + .2, 0, len / 2 - .2]) { const post = boxMesh(.1, 1, .1, slabMat); post.position.set(e * (bw / 2 - .05), .55, z); br.add(post); }
+        const tube = boxMesh(.04, .04, len * .9, neonMat(0x7fe8ff)); tube.position.set(e * (bw / 2 - .05), 1.06, 0); br.add(tube);
+      }
+      const beam = boxMesh(.3, .5, len, slabMat); beam.position.set(0, -.35, 0); br.add(beam);
+    }
+    { // the launch ramp: a steel wedge rising to the near lip
+      const rw = g.r1 - g.r0, cx = xc(g.d0 - RAMP_L / 2) + (g.r0 + g.r1) / 2, ys = G(g.d0 - RAMP_L, cx), ye = G(g.d0, cx) + RAMP_H;
+      const ang = Math.atan2(ye - ys, RAMP_L), l = Math.hypot(RAMP_L, ye - ys);
+      const rp = new THREE.Group(); rp.position.set(cx, (ys + ye) / 2 - .08, -(g.d0 - RAMP_L / 2)); rp.rotation.x = ang; grp.add(rp);
+      const plate = boxMesh(rw, .18, l, slabMat); plate.receiveShadow = true; plate.castShadow = true; rp.add(plate);
+      for (let i = 0; i < 4; i++) { const ch = boxMesh(rw * .9, .02, .3, hazardMat); ch.position.set(0, .1, -l / 2 + .6 + i * (l - 1.2) / 3); rp.add(ch); }
+      const lipT = boxMesh(rw, .06, .06, neonMat(0xffb43a)); lipT.position.set(0, .12, -l / 2 + .03); rp.add(lipT);
+      const wall = boxMesh(rw, RAMP_H + .3, .3, slabMat); wall.position.set(cx, G(g.d0, cx) + RAMP_H / 2 - .1, -g.d0 + .15); grp.add(wall);
+      for (const e of [-1, 1]) { const side = boxMesh(.12, .7, RAMP_L * .9, hazardMat); side.position.set(cx + e * (rw / 2), (ys + ye) / 2 - .3, -(g.d0 - RAMP_L / 2)); side.rotation.x = ang; grp.add(side); }
     }
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(hwAt(mid) * 2.2, (g.d1 - g.d0) * 1.2), abyssMat);
     glow.rotation.x = -Math.PI / 2; glow.position.set(xc(mid), H(mid) - 12, -mid); grp.add(glow);
@@ -605,26 +691,24 @@ const ball = (() => {
 // A big marble figure (about 3.6 m) trudging uphill. Right fist in a steel gauntlet for punching,
 // left forearm raised to block when the boulder rolls into him.
 const P = { d: 0, off: 0, toff: 0, p: new THREE.Vector3(), v: new THREE.Vector3(), stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0,
-  group: new THREE.Group(), walk: 0, lastStep: 0, guard: 0, block: 0, cheer: 0, fade: 1, yaw: 0 };
+  group: new THREE.Group(), walk: 0, lastStep: 0, guard: 0, block: 0, bonk: 0, cheer: 0, fade: 1, yaw: 0, coil: 0, punchT: -1, punchPow: .5, air: -1 };
 const figMats = [];
-const J = {}; // joints
-// Sisyphus as a Greek statue come to life: sculpted marble anatomy, gold laurel and cestus, crimson drapery.
+const J = {}; // bones
+// Sisyphus: one continuous sculpted marble body (pre-built, see sdfbody.mjs), skinned to a skeleton so it
+// bends at the joints, dressed in crimson drapery and gold.
 (() => {
-  const g = P.group;
-  const TAU = Math.PI * 2;
-  const gauss = (x, w) => Math.exp(-(x * x) / (2 * w * w));
-  const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
-  // --- materials
+  const g = P.group, TAU = Math.PI * 2;
   const marbleTex = tex(noiseCanvas(512, (x, s) => {
     x.fillStyle = '#efe8dc'; x.fillRect(0, 0, s, s);
     for (let i = 0; i < 26; i++) {
-      x.strokeStyle = `rgba(${rnd(120, 160)},${rnd(115, 145)},${rnd(110, 135)},${rnd(.05, .16)})`; x.lineWidth = rnd(.6, 2.4);
+      x.strokeStyle = `rgba(${rnd(120, 160)},${rnd(115, 145)},${rnd(110, 135)},${rnd(.05, .14)})`; x.lineWidth = rnd(.6, 2.4);
       x.beginPath(); let px = rnd(0, s), py = rnd(0, s); x.moveTo(px, py);
       for (let k = 0; k < 10; k++) { px += rnd(-50, 50); py += rnd(-35, 35); x.lineTo(px, py); } x.stroke();
     }
     for (let i = 0; i < 1200; i++) { x.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '140,128,115'},${rnd(.02, .06)})`; x.fillRect(rnd(0, s), rnd(0, s), 2, 2); }
   }));
-  const withRim = (m, col, k) => { // a soft fresnel rim so his silhouette reads against the dark mountain
+  marbleTex.repeat.set(3, 1);
+  const withRim = (m, col, k) => {
     m.onBeforeCompile = sh => {
       sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
@@ -634,219 +718,199 @@ const J = {}; // joints
     return m;
   };
   const mk = (Ctor, o, rim) => { const m = new Ctor({ transparent: true, ...o }); if (rim) withRim(m, rim[0], rim[1]); figMats.push(m); return m; };
-  const marble = mk(THREE.MeshPhysicalMaterial, { color: 0xcfc5b4, map: marbleTex, bumpMap: marbleTex, bumpScale: .4, roughness: .48, metalness: 0, clearcoat: .18, clearcoatRoughness: .5, envMapIntensity: .9 }, [new THREE.Color(.7, .82, 1), .28]);
-  const marbleDk = mk(THREE.MeshPhysicalMaterial, { color: 0xa99d8a, map: marbleTex, roughness: .6, metalness: 0, clearcoat: .1, envMapIntensity: .8 }, [new THREE.Color(.7, .82, 1), .22]);
-  const cloth = mk(THREE.MeshStandardMaterial, { color: 0x8a1d22, roughness: .78, side: THREE.DoubleSide }, [new THREE.Color(1, .45, .35), .35]);
+  const rimC = new THREE.Color(.7, .82, 1);
+  const marble = mk(THREE.MeshPhysicalMaterial, { color: 0xd3c9b8, map: marbleTex, roughness: .42, metalness: 0, clearcoat: .22, clearcoatRoughness: .45, envMapIntensity: .95 }, [rimC, .3]);
+  const marbleDk = mk(THREE.MeshPhysicalMaterial, { color: 0xa99d8a, map: marbleTex, roughness: .6, clearcoat: .1, envMapIntensity: .8 }, [rimC, .22]);
+  const cloth = mk(THREE.MeshStandardMaterial, { color: 0x8a1d22, roughness: .78, side: THREE.DoubleSide }, [new THREE.Color(1, .45, .35), .3]);
   const gold = mk(THREE.MeshStandardMaterial, { color: 0xe0a94a, metalness: 1, roughness: .34, envMapIntensity: 1.3 });
   const leather = mk(THREE.MeshStandardMaterial, { color: 0x5a3a22, roughness: .75 });
   const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .55, .2), transparent: true, opacity: 0 }); P.glowM = glowM;
-  // --- helpers
   const add = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
-  const joint = (parent, x, y, z) => { const j = new THREE.Group(); j.position.set(x, y, z); parent.add(j); return j; };
-  // a turned shape from a radius profile [[y, r], ...] top to bottom, then sculpted: bump(theta, y) scales the radius.
-  // theta = 0 points forward (-z), +PI/2 points to +x.
+  const ellip = (rx, ry, rz, ws = 18, hs = 14) => { const q = new THREE.SphereGeometry(1, ws, hs); q.scale(rx, ry, rz); return q; };
   function lathe(profile, segs, bump, sx = 1, sz = 1) {
-    const pts = profile.map(([y, r]) => new THREE.Vector2(r, y)).reverse();
-    const geo = new THREE.LatheGeometry(pts, segs);
-    const p = geo.attributes.position;
+    const geo = new THREE.LatheGeometry(profile.map(([y, r]) => new THREE.Vector2(r, y)).reverse(), segs), p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), r = Math.hypot(x, z);
-      if (r < 1e-5) continue;
-      const th = Math.atan2(x, -z);
-      const k = bump ? 1 + bump(th, y) : 1;
-      p.setXYZ(i, x * k * sx, y, z * k * sz);
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (Math.hypot(x, z) < 1e-5) continue;
+      const k = bump ? 1 + bump(Math.atan2(x, -z), y) : 1; p.setXYZ(i, x * k * sx, y, z * k * sz);
     }
-    geo.computeVertexNormals();
-    return geo;
+    geo.computeVertexNormals(); return geo;
   }
-  const ellip = (rx, ry, rz, ws = 18, hs = 14) => { const g = new THREE.SphereGeometry(1, ws, hs); g.scale(rx, ry, rz); return g; };
-  const root = joint(g, 0, 0, 0); root.scale.setScalar(2); J.root = root;
-  const hips = joint(root, 0, .93, 0); J.hips = hips;
-
-  // --- pelvis and glutes
-  add(hips, lathe([[.08, .16], [.02, .175], [-.06, .18], [-.12, .15]], 24,
-    (th, y) => .1 * gauss(Math.abs(angDiff(th, Math.PI)) - .55, .45) * gauss(y + .06, .05), 1.15, .9), marble);
-  // hip wrap with deep folds (the himation), hangs to mid thigh
-  const wrap = lathe([[.06, .19], [-.02, .205], [-.14, .235], [-.27, .27], [-.33, .28]], 40,
-    (th, y) => .07 * Math.sin(th * 9 + y * 6) * smooth(.02, -.25, y) + .03 * Math.sin(th * 4 + 1), 1.12, .92);
-  const wrapM = add(hips, wrap, cloth); wrapM.castShadow = true;
-  { const belt = add(hips, new THREE.TorusGeometry(.2, .016, 8, 40), gold, 0, .055, 0); belt.rotation.x = Math.PI / 2; belt.scale.set(1.1, .92, 1); } // gold belt
-  // --- legs: quads, knee, calves
-  for (const s of [-1, 1]) {
-    const hip = joint(hips, s * .095, -.04, 0); J['hip' + s] = hip;
-    add(hip, lathe([[0, .112], [-.06, .114], [-.16, .108], [-.26, .096], [-.35, .08], [-.42, .064], [-.45, .06]], 22,
-      (th, y) => .12 * gauss(angDiff(th, 0), .7) * gauss(y + .18, .1) + .08 * gauss(angDiff(th, -s * .9), .5) * gauss(y + .37, .05)), marble);
-    const knee = joint(hip, 0, -.43, 0); J['knee' + s] = knee;
-    add(knee, ellip(.058, .05, .055), marble, 0, -.01, -.012); // kneecap
-    add(knee, lathe([[.02, .062], [-.05, .07], [-.13, .073], [-.22, .056], [-.32, .04], [-.4, .033], [-.42, .032]], 22,
-      (th, y) => .22 * gauss(Math.abs(angDiff(th, Math.PI)), .7) * gauss(y + .11, .07)), marble);
-    for (const y of [-.2, -.27, -.34]) add(knee, new THREE.TorusGeometry(y > -.25 ? .05 : .042, .006, 6, 18), leather, 0, y, 0).rotateX(Math.PI / 2); // sandal laces
-    const ankle = joint(knee, 0, -.42, 0);
-    add(ankle, ellip(.042, .03, .1), marble, 0, -.012, -.05);
-    add(ankle, new THREE.BoxGeometry(.09, .018, .23), leather, 0, -.04, -.05);
-    add(ankle, new THREE.TorusGeometry(.04, .006, 6, 16), leather, 0, -.005, -.02).rotateX(Math.PI / 2);
+  // skeleton (rest pose matches the sculpture)
+  const root = new THREE.Group(); root.scale.setScalar(2); g.add(root); J.root = root;
+  for (const [name, [parent, x, y, z]] of Object.entries(BODY_BONES)) {
+    const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z);
+    (parent ? J[parent] : root).add(b); J[name] = b;
   }
-  // --- torso: V-taper, chest, abs, lats, shoulder blades, spine groove, traps
-  const spine = joint(hips, 0, .05, 0); J.spine = spine;
-  const torso = lathe([[.62, .07], [.58, .12], [.54, .2], [.48, .225], [.4, .215], [.3, .19], [.2, .165], [.1, .15], [0, .155], [-.04, .16]], 48,
-    (th, y) => {
-      const front = gauss(angDiff(th, 0), .9), back = gauss(Math.abs(angDiff(th, Math.PI)), .9);
-      const side = gauss(Math.abs(angDiff(th, 0)) - Math.PI / 2, .35);
-      let k = 0;
-      k += .11 * front * gauss(Math.abs(angDiff(th, 0)) - .42, .32) * gauss(y - .41, .055);                      // pecs
-      k -= .05 * front * gauss(y - .36, .025) * gauss(angDiff(th, 0), .5);                                     // under-pec line
-      if (y < .33 && y > .05) k += .025 * front * gauss(angDiff(th, 0), .45) * (.5 + .5 * Math.cos((y - .05) / .085 * TAU)); // abs rows
-      k -= .035 * gauss(angDiff(th, 0), .05) * smooth(.02, .1, y) * smooth(.36, .3, y);                         // centre line
-      k += .08 * side * gauss(y - .3, .08);                                                                    // lats
-      k += .07 * back * gauss(Math.abs(angDiff(th, Math.PI)) - .48, .25) * gauss(y - .42, .06);                 // shoulder blades
-      k -= .05 * gauss(angDiff(th, Math.PI), .07) * smooth(.04, .12, y) * smooth(.56, .48, y);                 // spine groove
-      k += .1 * gauss(Math.abs(Math.abs(angDiff(th, 0)) - Math.PI / 2) - 1.0, .4) * gauss(y - .55, .035);      // traps
-      return k;
-    }, 1.42, .82);
-  add(spine, torso, marble);
-  // deltoids sit on the torso, so the shoulders always look capped
-  for (const s of [-1, 1]) add(spine, ellip(.1, .085, .085), marble, s * .265, .48, 0);
-  // the drapery over the left shoulder, diagonally across chest and back to the right hip
+  const bones = BODY_BONE_NAMES.map(n => J[n]);
+  // the marble body arrives a moment after load (it's unpacked in the background)
+  loadBodyGeometry().then(geo => {
+    root.updateMatrixWorld(true);
+    const mesh = new THREE.SkinnedMesh(geo, marble);
+    mesh.castShadow = true; mesh.frustumCulled = false;
+    root.add(mesh);
+    root.updateMatrixWorld(true);
+    mesh.bind(new THREE.Skeleton(bones));
+    P.body = mesh;
+  }).catch(err => console.warn('body', err));
+  // drapery: hip wrap with deep folds, gold belt
+  const wrap = lathe([[.06, .2], [-.02, .215], [-.14, .245], [-.27, .28], [-.33, .29]], 40,
+    (th, y) => .07 * Math.sin(th * 9 + y * 6) * smooth(.02, -.25, y) + .03 * Math.sin(th * 4 + 1), 1.1, .95);
+  add(J.hips, wrap, cloth);
+  { const belt = add(J.hips, new THREE.TorusGeometry(.2, .016, 8, 40), gold, 0, .055, 0); belt.rotation.x = Math.PI / 2; belt.scale.set(1.05, .95, 1); }
+  // sash over the left shoulder, diagonally to the right hip
   {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.33, -.02, -.12), new THREE.Vector3(.1, .2, -.2), new THREE.Vector3(-.15, .45, -.16), new THREE.Vector3(-.27, .56, 0),
-      new THREE.Vector3(-.15, .45, .17), new THREE.Vector3(.1, .2, .2), new THREE.Vector3(.33, -.02, .12),
+      new THREE.Vector3(.31, -.02, -.13), new THREE.Vector3(.1, .2, -.19), new THREE.Vector3(-.15, .45, -.16), new THREE.Vector3(-.28, .56, 0),
+      new THREE.Vector3(-.15, .45, .17), new THREE.Vector3(.1, .2, .17), new THREE.Vector3(.31, -.02, .13),
     ], true);
     const N = 120, W = .085, pos = [], idx = [], tmp = new THREE.Vector3(), out = new THREE.Vector3(), bn = new THREE.Vector3();
     for (let i = 0; i <= N; i++) {
       const t = i / N, p = curve.getPointAt(t), tg = curve.getTangentAt(t);
       out.set(p.x, 0, p.z).normalize(); bn.crossVectors(tg, out).normalize();
       const fold = .012 * Math.sin(t * 60), w = W * (1 + .25 * Math.sin(t * TAU * 2));
-      for (const e of [-1, 1]) { tmp.copy(p).addScaledVector(out, .03 + fold).addScaledVector(bn, e * w); pos.push(tmp.x, tmp.y, tmp.z); }
+      for (const e of [-1, 1]) { tmp.copy(p).addScaledVector(out, .035 + fold).addScaledVector(bn, e * w); pos.push(tmp.x, tmp.y, tmp.z); }
       if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
-    add(spine, geo, cloth);
-    // a gold brooch where it pins at the shoulder
-    add(spine, new THREE.CylinderGeometry(.03, .03, .012, 16), gold, -.25, .55, -.06).rotation.x = Math.PI / 2;
+    add(J.spine, geo, cloth);
+    add(J.spine, new THREE.CylinderGeometry(.03, .03, .012, 16), gold, -.26, .55, -.07).rotation.x = Math.PI / 2;
   }
-  // a crimson cloak pinned at the left shoulder, hanging down his back; it ripples as he climbs
-  {
-    const cw = 10, ch = 14, geo = new THREE.PlaneGeometry(.34, .95, cw, ch);
-    geo.translate(0, -.475, 0);
-    const base = geo.attributes.position.array.slice();
-    const capeM = add(spine, geo, cloth, -.08, .56, .2); capeM.rotation.x = .12; capeM.rotation.z = .1;
-    P.cape = { geo, base, cw, ch };
-    add(spine, new THREE.CylinderGeometry(.032, .032, .014, 16), gold, -.2, .56, .14).rotation.x = Math.PI / 2;
-  }
-  // --- neck and head
-  add(spine, lathe([[.71, .055], [.66, .058], [.6, .07], [.56, .085]], 16, (th, y) => .06 * gauss(Math.abs(angDiff(th, 0)) - .5, .3)), marble);
-  const head = joint(spine, 0, .76, 0); J.head = head;
-  const skull = ellip(.098, .118, .112, 28, 22);
-  { // jaw narrower, brow forward, a straight Greek nose
-    const p = skull.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      if (y < -.02) { const k = 1 - .25 * smooth(-.02, -.12, y); x *= k; z = z < 0 ? z * (1 - .1 * smooth(-.02, -.12, y)) : z * k; }
-      if (z < -.08 && y > .0 && y < .05) z -= .012 * gauss(x, .05);
-      p.setXYZ(i, x, y, z);
-    }
-    skull.computeVertexNormals();
-  }
-  add(head, skull, marble);
-  add(head, new THREE.ConeGeometry(.018, .05, 4), marble, 0, -.005, -.115).rotation.x = -Math.PI / 2 - .25;
-  // curls: hair over the crown and back, a full beard
+  // carved curls and beard, gold laurel
   const curl = new THREE.IcosahedronGeometry(1, 1), R = mulberry(41);
   for (let i = 0; i < 120; i++) {
     const th = R() * TAU, ph = R() * 1.3;
-    const fwd = Math.cos(th) < 0 ? 1 : 0;
-    if (fwd && ph > .9) continue; // keep the forehead clear
+    if (Math.cos(th) < 0 && ph > .85) continue;
     const dir = new THREE.Vector3(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th));
-    const m = add(head, curl, marbleDk, dir.x * .104, dir.y * .118 + .006, dir.z * .112); m.scale.set(.018 + R() * .006, .013, .018 + R() * .006); m.lookAt(m.position.clone().multiplyScalar(2).add(head.position)); m.castShadow = false;
+    const m = add(J.head, curl, marbleDk, dir.x * .1, dir.y * .114 + .006, dir.z * .108);
+    m.scale.set(.018 + R() * .006, .013, .018 + R() * .006); m.lookAt(m.position.clone().multiplyScalar(3)); m.castShadow = false;
   }
   for (let i = 0; i < 60; i++) {
-    const a = (R() - .5) * 2.2, y = -.035 - R() * .095;
-    const r = .095 * (1 - .4 * smooth(-.03, -.13, y));
-    const m = add(head, curl, marbleDk, Math.sin(a) * r, y, -Math.cos(a) * r * .95 - .006); m.scale.set(.016 + R() * .006, .02, .014); m.castShadow = false;
+    const a = (R() - .5) * 2.2, y = -.04 - R() * .09, r = .09 * (1 - .4 * smooth(-.04, -.13, y));
+    const m = add(J.head, curl, marbleDk, Math.sin(a) * r, y, -Math.cos(a) * r * .95 - .006); m.scale.set(.016 + R() * .006, .02, .014); m.castShadow = false;
   }
-  // gold laurel wreath
-  const wreathG = joint(head, 0, .045, .005); wreathG.rotation.x = -.18;
-  add(wreathG, new THREE.TorusGeometry(.118, .005, 6, 32), gold).rotation.x = Math.PI / 2;
+  const wreathG = new THREE.Group(); wreathG.position.set(0, .045, .005); wreathG.rotation.x = -.18; J.head.add(wreathG);
+  add(wreathG, new THREE.TorusGeometry(.116, .005, 6, 32), gold).rotation.x = Math.PI / 2;
   const leafG = ellip(.012, .004, .03, 8, 6);
   for (let i = 0; i < 26; i++) {
-    const a = (i / 26) * TAU; if (Math.cos(a) < -.85) continue; // gap at the front
-    for (const e of [-1, 1]) {
-      const m = add(wreathG, leafG, gold, Math.sin(a) * .12, .008 * e, Math.cos(a) * .12);
-      m.rotation.set(e * .5, a + Math.PI / 2, e * .4); m.castShadow = false;
-    }
+    const a = (i / 26) * TAU; if (Math.cos(a) < -.85) continue;
+    for (const e of [-1, 1]) { const m = add(wreathG, leafG, gold, Math.sin(a) * .118, .008 * e, Math.cos(a) * .118); m.rotation.set(e * .5, a + Math.PI / 2, e * .4); m.castShadow = false; }
   }
-  // --- arms: deltoid, biceps/triceps, forearm, gold cestus on the punching hand
+  // gold cestus on the punching fist, leather bracer + gold rings on the guarding arm
+  add(J.el1, ellip(.06, .06, .07), gold, 0, -.31, -.006);
+  for (const y of [-.19, -.225, -.26]) add(J.el1, new THREE.TorusGeometry(.043, .009, 6, 18), gold, 0, y, 0).rotateX(Math.PI / 2);
+  { const r1 = new THREE.Mesh(new THREE.TorusGeometry(.068, .012, 6, 22), glowM); r1.rotation.x = Math.PI / 2; r1.position.y = -.3; J.el1.add(r1); const r2 = r1.clone(); r2.position.y = -.245; J.el1.add(r2); }
+  add(J['el-1'], lathe([[-.08, .056], [-.14, .056], [-.21, .048], [-.25, .044]], 16), leather);
+  add(J['el-1'], new THREE.TorusGeometry(.056, .008, 6, 18), gold, 0, -.09, 0).rotateX(Math.PI / 2);
+  add(J['sh-1'], new THREE.TorusGeometry(.078, .011, 6, 20), gold, 0, -.12, 0).rotateX(Math.PI / 2);
+  // sandals
   for (const s of [-1, 1]) {
-    const sh = joint(spine, s * .27, .45, 0); J['sh' + s] = sh;
-    add(sh, lathe([[.02, .084], [-.06, .083], [-.14, .078], [-.22, .066], [-.29, .055], [-.32, .052]], 22,
-      (th, y) => .16 * gauss(angDiff(th, 0), .6) * gauss(y + .15, .06) + .12 * gauss(Math.abs(angDiff(th, Math.PI)), .7) * gauss(y + .1, .07)), marble);
-    const el = joint(sh, 0, -.31, 0); J['el' + s] = el;
-    add(el, ellip(.055, .05, .055), marble);
-    add(el, lathe([[.01, .056], [-.05, .066], [-.12, .057], [-.2, .044], [-.26, .037], [-.28, .036]], 22,
-      (th, y) => .12 * gauss(angDiff(th, s * .9), .6) * gauss(y + .05, .05)), marble);
-    if (s > 0) { // the punching hand: a gold-wrapped fist (a cestus) with charge rings
-      add(el, ellip(.06, .058, .068), gold, 0, -.32, -.006);
-      for (const y of [-.2, -.235, -.27]) add(el, new THREE.TorusGeometry(.04, .009, 6, 18), gold, 0, y, 0).rotateX(Math.PI / 2);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(.068, .012, 6, 22), glowM); ring.rotation.x = Math.PI / 2; ring.position.y = -.3; el.add(ring);
-      const ring2 = ring.clone(); ring2.position.y = -.25; el.add(ring2);
-    } else { // the guarding arm: a leather bracer with a gold band
-      add(el, lathe([[-.08, .046], [-.14, .047], [-.21, .041], [-.25, .038]], 16), leather);
-      add(el, new THREE.TorusGeometry(.046, .007, 6, 18), gold, 0, -.09, 0).rotateX(Math.PI / 2);
-      add(el, ellip(.045, .055, .062), marble, 0, -.31, -.004);
-      add(sh, new THREE.TorusGeometry(.068, .01, 6, 20), gold, 0, -.12, 0).rotateX(Math.PI / 2); // arm ring
-    }
+    add(J['ankle' + s], new THREE.BoxGeometry(.1, .018, .24), leather, 0, -.04, -.05);
+    for (const [y, r] of [[-.2, .062], [-.27, .052], [-.34, .045]]) add(J['knee' + s], new THREE.TorusGeometry(r, .006, 6, 18), leather, 0, y, 0).rotateX(Math.PI / 2);
   }
   scene.add(g);
 })();
-// the pose: walking, winding up (right arm cocked, torso twisted), punching, guarding, blocking
+const ease = { out: t => 1 - (1 - t) * (1 - t) * (1 - t), inOut: t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2 };
+// the pose: a heavy uphill trudge with hips and shoulders counter-rotating; the punch drives from the
+// hips, then the shoulders, then the arm, with a lunge and follow-through; guard, block, stumble, leap
 function poseFigure(dt, t, sp) {
-  P.walk += dt * sp / 2.6 * Math.PI * 2;
+  const TAU = Math.PI * 2, amp = clamp(sp / 6, 0, 1.25);
+  P.walk += dt * sp / 2.6 * TAU;
   const ph = P.walk;
-  // footsteps
   const stepIdx = Math.floor(ph / Math.PI);
-  if (stepIdx !== P.lastStep && mode === 'play') { P.lastStep = stepIdx; sfx.step(); dustAt.set(0, 0, 0); J['hip' + (stepIdx % 2 ? 1 : -1)].localToWorld(dustAt.set(0, -.9, 0)); dust(dustAt, 3, 1.2); }
-  const c = P.charging ? P.charge : 0;
-  // punch extension: fast out, slower back
-  const r = P.release, ext = r <= 0 ? 0 : r > .8 ? (1 - r) / .2 : r / .8;
-  for (const s of [-1, 1]) {
-    const leg = Math.sin(ph + (s > 0 ? Math.PI : 0));
-    J['hip' + s].rotation.x = .5 * leg;
-    J['knee' + s].rotation.x = -(.1 + .62 * Math.max(0, Math.cos(ph + (s > 0 ? Math.PI : 0))));
+  if (stepIdx !== P.lastStep && mode === 'play' && P.air < 0) { P.lastStep = stepIdx; sfx.step(); J['ankle' + (stepIdx % 2 ? 1 : -1)].localToWorld(dustAt.set(0, -.04, 0)); dust(dustAt, 3, 1.2); }
+  P.coil = P.charging ? lerp(P.coil, P.charge, 1 - Math.exp(-14 * dt)) : lerp(P.coil, 0, 1 - Math.exp(-9 * dt));
+  const c = P.coil;
+  // punch timeline
+  let e = 0, hipT = 0;
+  if (P.punchT >= 0) {
+    P.punchT += dt; const q = P.punchT;
+    hipT = q < .05 ? ease.out(q / .05) : q < .22 ? 1 : Math.max(0, 1 - ease.inOut((q - .22) / .3));
+    e = q < .02 ? 0 : q < .08 ? ease.out((q - .02) / .06) * 1.1 : q < .12 ? lerp(1.1, 1, (q - .08) / .04) : q < .2 ? 1 : Math.max(0, 1 - ease.inOut((q - .2) / .3));
+    if (q > .55) P.punchT = -1;
   }
-  J.hips.position.y = .92 + .025 * Math.cos(ph * 2) - c * .07;
-  J.root.position.z = -ext * .4;
+  const pw = P.punchPow || .5;
+  const airK = P.air >= 0 ? Math.sin(Math.PI * P.air) : 0;
+  P.block = Math.max(0, P.block - dt * 2.5); P.bonk = Math.max(0, P.bonk - dt * 1.8); P.cheer = Math.max(0, P.cheer - dt);
+  const bk = P.block, bo = P.bonk;
+  // legs
+  for (const s of [-1, 1]) {
+    const lp = ph + (s > 0 ? Math.PI : 0);
+    let th = amp * (.42 * Math.sin(lp) + .06);
+    let kn = -(.1 + amp * .85 * Math.pow(Math.max(0, Math.cos(lp - .35)), 1.6));
+    th += .22 * c; kn -= .45 * c;                                   // crouch into the wind-up
+    if (s < 0) { th += .4 * e * pw; kn -= .25 * e; } else { th -= .3 * e * pw; kn -= .1 * e; } // lunge: front leg forward, back leg drives
+    th += .1 * bk; kn -= .35 * bk;
+    th = lerp(th, .95, airK); kn = lerp(kn, -1.6, airK);            // tuck for a leap
+    J['hip' + s].rotation.set(th, 0, s * (.03 + .04 * c));
+    J['knee' + s].rotation.x = kn;
+    J['ankle' + s].rotation.x = -(th + kn) * .75 + (s < 0 ? .1 * e : 0);
+  }
+  // hips: bob, sway, turn into the punch
+  J.hips.position.y = .925 + .028 * amp * Math.cos(ph * 2) - .085 * c - .05 * bk;
+  J.hips.rotation.set(0, .14 * amp * Math.sin(ph) - .35 * c + .32 * hipT * pw, .05 * amp * Math.cos(ph));
+  J.root.position.z = -e * .38 * pw + .18 * bk + .25 * bo;
+  // torso: lean into the hill, counter-rotate, coil and uncoil
+  const slope = Math.atan(Hp(P.d));
   const stunWob = P.stun > 0 ? Math.sin(t * 30) * .12 : 0;
-  J.spine.rotation.x = -.3 + c * .16 - ext * .2 + P.block * .3;
-  J.spine.rotation.y = -.85 * c + .6 * ext;
-  J.spine.rotation.z = .05 * Math.sin(ph) + stunWob;
-  J.head.rotation.x = .18 - c * .1;
-  J.head.rotation.z = Math.sin(t * .6) * .06;
-  // right arm: swing, cock, punch
-  const swingR = .35 * Math.sin(ph);
-  const shRx = lerp(lerp(swingR, -1.3, c), 1.6, ext), shRz = lerp(lerp(.08, .75, c), -.1, ext);
-  const elR = lerp(lerp(.25, 2.2, c), .05, ext);
-  J['sh1'].rotation.set(shRx, 0, shRz); J['el1'].rotation.x = elR;
-  // left arm: swing, or guard up in front, or a fist in the air on a PERFECT
-  P.guard = lerp(P.guard, (P.charging || P.block > 0 || nearBall()) ? 1 : 0, 1 - Math.exp(-10 * dt));
-  P.cheer = Math.max(0, P.cheer - dt);
-  const swingL = .35 * Math.sin(ph + Math.PI);
-  let shLx = lerp(swingL, 1.15 + P.block * .3, P.guard), shLz = lerp(-.08, .45, P.guard), elL = lerp(.25, 1.55, P.guard);
-  if (P.cheer > 0) { const k = Math.min(1, P.cheer * 3); shLx = lerp(shLx, 2.9, k); shLz = lerp(shLz, -.2, k); elL = lerp(elL, .2, k); }
-  J['sh-1'].rotation.set(shLx, 0, shLz); J['el-1'].rotation.x = elL;
-  P.block = Math.max(0, P.block - dt * 2.5);
-  if (P.cape) { // cloak ripple: more as he walks faster or punches
-    const { geo, base, cw } = P.cape, p = geo.attributes.position.array, amp = .03 + sp * .006 + ext * .05;
+  J.spine.rotation.set(-.24 * amp - slope * .45 - .05 + .12 * c - .16 * e + .3 * bk + .4 * bo - .2 * airK,
+    -.18 * amp * Math.sin(ph) - .62 * c + .55 * e * pw, .04 * Math.sin(ph) + stunWob, 'YXZ');
+  J.head.rotation.set(-J.spine.rotation.x * .6 + .12 - .3 * bo, -(J.hips.rotation.y + J.spine.rotation.y) * .6, Math.sin(t * .6) * .05 - stunWob * .5, 'YXZ');
+  // right arm: swing -> cocked -> punch
+  const swing = .38 * amp * Math.sin(ph);
+  const rx = lerp(lerp(swing, -1.25, c), 1.52, e), rz = lerp(lerp(.07, .8, c), -.06, e), re = lerp(lerp(.3 + .25 * Math.max(0, Math.sin(ph)), 2.2, c), .04, e);
+  J.sh1.rotation.set(lerp(rx, .3, bo), 0, lerp(rz, 1.1, bo));
+  J.el1.rotation.x = lerp(re, .3, bo);
+  // left arm: swing, guard up, brace on a block, fist in the air after a PERFECT, flail on a bonk
+  P.guard = lerp(P.guard, (P.charging || bk > 0 || nearBall()) ? 1 : 0, 1 - Math.exp(-10 * dt));
+  const lswing = .38 * amp * Math.sin(ph + Math.PI);
+  let lx = lerp(lswing, 1.1 + bk * .35, P.guard), lz = lerp(-.07, .5, P.guard), le = lerp(.3 + .25 * Math.max(0, -Math.sin(ph)), 1.6, P.guard);
+  if (e > 0) { lx = lerp(lx, .5, e); le = lerp(le, 1.9, e); }      // pull the other hand back to the chin while punching
+  if (P.cheer > 0) { const k = Math.min(1, P.cheer * 3); lx = lerp(lx, 2.95, k); lz = lerp(lz, -.25, k); le = lerp(le, .25, k); }
+  lx = lerp(lx, .3, bo); lz = lerp(lz, -1.1, bo); le = lerp(le, .3, bo);
+  lx = lerp(lx, -.6, airK); lz = lerp(lz, -.5, airK);
+  J['sh-1'].rotation.set(lx, 0, lz); J['el-1'].rotation.x = le;
+  if (airK > 0) { J.sh1.rotation.x = lerp(J.sh1.rotation.x, -.6, airK); J.sh1.rotation.z = lerp(J.sh1.rotation.z, .5, airK); }
+  // cloak ripple
+  if (P.cape) {
+    const { geo, base, cw } = P.cape, p = geo.attributes.position.array, a2 = .03 + sp * .006 + e * .06 + airK * .08;
     for (let i = 0; i < p.length; i += 3) {
       const y = base[i + 1], k = -y / .95, col = (i / 3) % (cw + 1);
       p[i] = base[i] + Math.sin(t * 3 + y * 6 + col) * .01 * k;
-      p[i + 2] = base[i + 2] + k * k * (.18 + .06 * c) + Math.sin(t * 5.5 - y * 9 + col * .5) * amp * k + Math.sin(ph) * .03 * k;
+      p[i + 2] = base[i + 2] + k * k * (.18 + .06 * c + .2 * airK) + Math.sin(t * 5.5 - y * 9 + col * .5) * a2 * k + Math.sin(ph) * .03 * k;
     }
     geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
   }
-  P.glowM.opacity = c * .95 + ext * .8;
+  P.glowM.opacity = (P.charging ? P.charge : 0) * .95 + e * .8;
   P.glowM.color.setRGB(1, .55 + c * .3, .2 + c * .3);
 }
 const nearBall = () => !ball.lost && -ball.p.z > P.d && ballGap() < 5;
+// unpack the pre-built body (gzipped, base64) into a skinned geometry
+async function loadBodyGeometry() {
+  const bin = Uint8Array.from(atob(BODY_DATA), ch => ch.charCodeAt(0));
+  const buf = await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  const [N, T] = new Uint32Array(buf, 0, 2);
+  let o = 8;
+  const pos16 = new Int16Array(buf, o, N * 3); o += N * 6;
+  const nrm8 = new Int8Array(buf, o, N * 3); o += N * 3;
+  const si = new Uint8Array(buf, o, N * 3); o += N * 3;
+  const sw = new Uint8Array(buf, o, N * 3); o += N * 3;
+  const idxD = new Int32Array(buf.slice(o, o + T * 4));
+  const pos = new Float32Array(N * 3), nrm = new Float32Array(N * 3), uv = new Float32Array(N * 2), sI = new Uint16Array(N * 4), sW = new Float32Array(N * 4);
+  for (let i = 0; i < N * 3; i++) { pos[i] = pos16[i] / 32767 * 2; nrm[i] = nrm8[i] / 127; }
+  for (let v = 0; v < N; v++) {
+    const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+    uv[v * 2] = Math.atan2(x, z) / (2 * Math.PI) + .5; uv[v * 2 + 1] = y * 1.6;
+    let sum = 0; for (let k = 0; k < 3; k++) { sI[v * 4 + k] = si[v * 3 + k]; sW[v * 4 + k] = sw[v * 3 + k]; sum += sw[v * 3 + k]; }
+    for (let k = 0; k < 3; k++) sW[v * 4 + k] /= sum || 1;
+  }
+  const idx = N > 65535 ? new Uint32Array(T) : new Uint16Array(T); let prev = 0; for (let i = 0; i < T; i++) { prev += idxD[i]; idx[i] = prev; }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('skinIndex', new THREE.BufferAttribute(sI, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sW, 4));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  return geo;
+}
 const reachRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .78, .35).multiplyScalar(1.5), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
 scene.add(reachRing);
 const ARC_N = 40;
@@ -1073,7 +1137,7 @@ function resetWorld() {
   for (const c of camps) disposeGroup(c.mesh); camps.length = 0;
   for (const t of tumblers) scene.remove(t.mesh); tumblers.length = 0;
   builtStages.clear(); work.length = 0; queued.clear();
-  Object.assign(P, { d: 0, off: 0, toff: 0, stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0, guard: 0, block: 0, cheer: 0 });
+  Object.assign(P, { d: 0, off: 0, toff: 0, stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0, guard: 0, block: 0, cheer: 0, bonk: 0, coil: 0, punchT: -1, air: -1 });
   P.p.set(xc(0), G(0, xc(0)), 0);
   placeBall(11, 0, .5);
   updateChunks(0, true);
@@ -1198,7 +1262,7 @@ function strikeVel(c, perfect, out) {
 function strike(charge, auto) {
   if (mode !== 'play' || P.stun > 0 || ball.lost) return;
   const gap = ballGap(), ahead = -ball.p.z > P.d - .4;
-  P.release = 1;
+  P.release = 1; P.punchT = 0; P.punchPow = Math.max(.3, charge);
   const c = Math.max(.12, charge);
   if (gap < reachNow() && ahead) {
     P.cool = .25;
@@ -1244,10 +1308,18 @@ function stepSphere(o, dt, isBall) {
   o.p.addScaledVector(o.v, dt);
   const d = -o.p.z, impact = isBall ? ballImpact : null;
   o.grounded = false;
-  const gap = inGap(d);
-  if (!gap) {
-    const h = G(d, o.p.x);
-    n3.set(-Gx(d, o.p.x), 1, Gd(d, o.p.x)).normalize();
+  let gap = inGap(d);
+  const offX = o.p.x - xc(d);
+  const bridged = gap && onBridge(gap, offX);
+  if (!gap || bridged) {
+    let h, gdx = 0, gdd = 0;
+    if (bridged) { h = bridgeY(gap, d, o.p.x); gdd = (G(gap.d1, o.p.x) - G(gap.d0, o.p.x)) / (gap.d1 - gap.d0); gap = null; }
+    else {
+      h = G(d, o.p.x); gdx = Gx(d, o.p.x); gdd = Gd(d, o.p.x);
+      const rg = rampAt(d, offX);
+      if (rg) { h += RAMP_H * (d - (rg.d0 - RAMP_L)) / RAMP_L; gdd += RAMP_H / RAMP_L; }
+    }
+    n3.set(-gdx, 1, gdd).normalize();
     const dist = (o.p.y - h) * n3.y;
     if (dist < o.r && dist > -o.r * 3) {
       o.p.addScaledVector(n3, o.r - dist);
@@ -1330,6 +1402,12 @@ function stepTitan(dt) {
   }
   P.p.set(xc(P.d) + P.off, 0, -P.d);
   P.p.y = G(P.d, P.p.x);
+  P.air = -1;
+  for (const g of gapsFor(stageAt(P.d))) {
+    if (P.d < g.d0 - .6 || P.d > g.d1 + .6) continue;
+    if (onBridge(g, P.off)) { if (P.d > g.d0 && P.d < g.d1) P.p.y = bridgeY(g, P.d, P.p.x); }
+    else { const t = (P.d - (g.d0 - .6)) / (g.d1 - g.d0 + 1.2); P.p.y = lerp(G(g.d0 - .6, P.p.x), G(g.d1 + .6, P.p.x), t) + (1.1 + (g.d1 - g.d0) * .2) * 4 * t * (1 - t); P.air = t; }
+  }
   P.v.subVectors(P.p, prevP).divideScalar(dt);
   if (P.charging) {
     P.charge = Math.min(1, P.charge + dt / (CFG.chargeTime / (1 + .35 * S.perks.quick)));
@@ -1354,7 +1432,7 @@ function stepTitan(dt) {
       const rel = gv.subVectors(ball.v, P.v).dot(nrm);
       if (rel < 0) ball.v.addScaledVector(nrm, -(1 + .15) * rel);
       if (P.bumpCool <= 0) {
-        P.bumpCool = .45; P.stagger = .35;
+        P.bumpCool = .45; P.stagger = .35; P.bonk = 1;
         const bd = -ball.p.z;
         ball.v.set(xcp(bd) * 6 + (rnd(-2.5, 2.5) + (ball.p.x - P.p.x)) * (1 - .6 * ridgeAmt(bd)), 6, -(speedNow() + 4));
         ball.flying = false;
@@ -1472,12 +1550,12 @@ function predictArc() {
     arcV.y -= CFG.g / 60; arcP.addScaledVector(arcV, 1 / 60);
     if (s % 3 === 0) pos.setXYZ(i++, arcP.x, arcP.y, arcP.z);
     const d = -arcP.z;
-    if (!inGap(d) && arcP.y - ball.r < G(d, arcP.x)) { landed = true; break; }
+    if (!openGap(d, arcP.x) && arcP.y - ball.r < G(d, arcP.x)) { landed = true; break; }
     if (arcP.y < H(d) - 6) break;
   }
   for (; i < ARC_N; i++) pos.setXYZ(i, arcP.x, arcP.y, arcP.z);
   pos.needsUpdate = true;
-  const d = -arcP.z, bad = !landed || inGap(d) || Math.abs(arcP.x - xc(d)) > hwAt(d) + 1;
+  const d = -arcP.z, bad = !landed || openGap(d, arcP.x) || Math.abs(arcP.x - xc(d)) > hwAt(d) + 1;
   arcLand.position.set(arcP.x, G(d, arcP.x) + .1, arcP.z); arcLand.rotation.set(-Math.PI / 2, 0, 0);
   arcLand.material.color.setRGB(1, bad ? .3 : .8, bad ? .2 : .4).multiplyScalar(1.6);
 }
@@ -1512,12 +1590,12 @@ function render(dt, t) {
   ball.group.position.copy(ball.p);
   ball.heat = Math.max(0, ball.heat - dt * .9);
   ball.mat.emissiveIntensity = .25 + ball.heat * 2;
-  const bd = -ball.p.z, gh = inGap(bd) ? H(bd) - 12 : G(bd, ball.p.x);
+  const bd = -ball.p.z, gh = openGap(bd, ball.p.x) ? H(bd) - 12 : G(bd, ball.p.x);
   const above = ball.p.y - ball.r - gh;
   ball.marker.position.set(ball.p.x, gh + .08, ball.p.z);
   ball.marker.rotation.set(-Math.PI / 2 + Math.atan(Hp(bd)), 0, 0);
   ball.marker.scale.setScalar(ball.r * (1 + above * .08));
-  ball.marker.material.opacity = clamp((above - 1.5) * .2, 0, .6) * (inGap(bd) ? 0 : 1);
+  ball.marker.material.opacity = clamp((above - 1.5) * .2, 0, .6) * (openGap(bd, ball.p.x) ? 0 : 1);
   for (const tb of tumblers) tb.mesh.position.copy(tb.p);
   for (const s of cells) if (!s.taken) { s.t += dt; s.mesh.rotation.y = s.t * 1.6; s.mesh.position.set(xc(s.d) + s.off, H(s.d) + s.y + Math.sin(s.t * 2.2) * .15, -s.d); s.mesh.visible = s.mesh.position.distanceToSquared(camera.position) > 30; }
   for (const gt of gates) gt.mesh.position.set(gt.x, G(gt.d, gt.x) + gt.h / 2, -gt.d);
@@ -1661,4 +1739,4 @@ function frame(now) {
   composer.render();
 }
 requestAnimationFrame(frame);
-window.__summit = { buildChunk, buildStage, far, clouds, scene, S, P, ball, CFG, H, G, xc, inGap, offerPerks, start, strike, update, takePerk, get mode() { return mode; }, get perkChoices() { return perkChoices; }, ballGap, reachNow, doWork };
+window.__summit = { gapsFor, openGap, buildChunk, buildStage, far, clouds, scene, S, P, ball, CFG, H, G, xc, inGap, offerPerks, start, strike, update, takePerk, get mode() { return mode; }, get perkChoices() { return perkChoices; }, ballGap, reachNow, doWork };

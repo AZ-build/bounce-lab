@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [Summit v9 "The Summits"] - 2026-11-23
+- One boulder, like the myth. Lose it and it rolls all the way back down while your height counts back to zero, then your score is posted
+- Your score is now your height (total metres climbed), shown big at the top. Points are still counted and shown at the end
+- Real summits: a chain of mountains, each with a top you can reach. Acrocorinth (6 stages), Mount Parnassus (7), Mount Olympus (8), then the endless hills of Tartarus. Each is steeper and busier than the last
+- The summit: get the boulder onto the flat top and it settles on the altar of a round marble temple just as the sun comes up. Sisyphus throws his fists up, gold laurel leaves burst out, and the gods offer you a gift (pick an advantage). Then the boulder tips off the far side and rolls down to the foot of the next mountain
+- Each mountain is visible from the start as a snowy peak with a fire burning on top, and sunrise is timed so you reach the top at dawn
+- Charon's fare: coins are now obols (bronze 1, silver 3, gold 10). Lose the boulder with enough obols (30, more on later mountains) and Charon offers to row it back from the underworld. Once per mountain
+- New stage: The Wrath of Zeus. A pale glow marks where lightning will strike a second later; it stuns Sisyphus or knocks the boulder back down at you. Zeus joins other stages on Olympus and beyond
+- New advantage Chain Death replaces Spare Boulder: once per mountain, a lost boulder comes back
+- Fix: Sisyphus's body could sometimes load stretched and broken (it was attached to his skeleton mid-stride); it is now always attached in his rest pose
+- v8 kept at versions/v8.html
+
 ## [Summit v8 "The Path"] - 2026-11-23
 - Each crevasse now has ONE helper, never both: either a marble bridge along one edge (now a bit wider) or a wide rock launch ramp. Sisyphus walks up the ramp and leaps from its top
 - An old stone path now switchbacks up the ridge to the summit, so you can see the climb still ahead

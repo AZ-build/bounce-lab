@@ -1,7 +1,7 @@
-// SUMMIT v8 "The Path" — a Sisyphus game for Bounce Lab.
-// Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
-// endless mountain road, hurling a giant boulder ahead and smashing it again when it
-// rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
+// SUMMIT v9 "The Summits" — a Sisyphus game for Bounce Lab.
+// Sisyphus punches one boulder up a chain of real mountains (Acrocorinth, Parnassus, Olympus, then the
+// endless hills of Tartarus). Reach the temple on each summit at sunrise; the boulder then rolls down the far
+// side to the foot of the next. Lose the boulder and it rolls all the way back down: your height is the score.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -29,15 +29,28 @@ const STAGES = [
   { name: 'The Switchback', note: 'Rockfall from the cliff. Dodge it.', deg: 10.5, rocks: .5, tumble: 1, gaps: 0, gates: 0, ridge: 0, tint: 0xffb43a },
   { name: 'The Crevasses', note: 'Smash it clean over the gaps.', deg: 12, rocks: .4, tumble: .45, gaps: 1, gates: 0, ridge: 0, tint: 0xff4fa0 },
   { name: 'The Clashing Rocks', note: 'Stone blocks grind across the road.', deg: 13.5, rocks: .35, tumble: .5, gaps: .35, gates: 1, ridge: 0, tint: 0x7dff6a },
-  { name: 'The Ridge', note: 'Nothing on either side now.', deg: 14.5, rocks: .3, tumble: .4, gaps: .35, gates: .3, ridge: 1, tint: 0xa77bff },
+  { name: 'The Wrath of Zeus', note: 'Lightning! Watch for the glow and step aside.', deg: 14, rocks: .25, tumble: .3, gaps: .3, gates: .3, ridge: 0, zeus: 1, tint: 0xffe27a },
+  { name: 'The Ridge', note: 'Nothing on either side now. The summit is close.', deg: 14.5, rocks: .3, tumble: .4, gaps: .35, gates: .3, ridge: 1, tint: 0xa77bff },
 ];
+// Each run is a chain of real mountains with a summit at the top of each one.
+const MOUNTAINS = [
+  { name: 'Acrocorinth', sub: 'The great rock above Corinth, Sisyphus\'s own city', n: 6 },
+  { name: 'Mount Parnassus', sub: 'Home of the Muses', n: 7 },
+  { name: 'Mount Olympus', sub: 'Home of the gods. Zeus is watching.', n: 8 },
+];
+let MT = 0; // which mountain you're on (0 = Acrocorinth)
+const mountainDef = (m = MT) => m < MOUNTAINS.length ? MOUNTAINS[m] : { name: 'Tartarus ' + ROMAN(m - 2), sub: 'The endless hill of the underworld', n: 8 };
+const nStages = () => mountainDef().n;
+const summitD = () => nStages() * CFG.stageLen;     // where the road reaches the top
+const SUMMIT_STAGE = { name: 'The Summit', note: '', deg: 0, rocks: 0, tumble: 0, gaps: 0, gates: 0, ridge: 1, zeus: 0, summit: true, tint: 0xffd27a };
+function stageSeq(m) { const n = mountainDef(m).n, mid = []; for (let i = 0; i < n - 6; i++) mid.push(2 + (i % 3)); return [0, 1, 2, 3, ...mid, 4, 5]; }
 function stageDef(k) {
-  if (k < STAGES.length) return STAGES[k];
-  const loop = k - STAGES.length, lap = Math.floor(loop / (STAGES.length - 1)) + 1;
-  const b = STAGES[1 + (loop % (STAGES.length - 1))];
-  return { ...b, name: b.name + ' ' + ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][Math.min(lap, 8)], deg: Math.min(23, b.deg + 2.4 * lap),
-    rocks: Math.min(.8, b.rocks + .1 * lap), tumble: Math.min(1.5, b.tumble + .4 * lap), gaps: Math.min(1, b.gaps + .3 * lap),
-    gates: Math.min(1, b.gates + .25 * lap), mixed: true };
+  const seq = stageSeq(MT);
+  if (k >= seq.length) return SUMMIT_STAGE;
+  const b = STAGES[seq[k]], lap = MT + (seq.indexOf(seq[k]) < k ? .5 : 0); // later mountains, and repeats, are harder
+  if (!lap) return { zeus: 0, ...b };
+  return { ...b, deg: Math.min(22, b.deg + 1.5 * lap), rocks: Math.min(.8, b.rocks + .08 * lap), tumble: Math.min(1.5, b.tumble + .3 * lap),
+    gaps: Math.min(1, b.gaps + .2 * lap), gates: Math.min(1, b.gates + .2 * lap), zeus: Math.min(1, (b.zeus || 0) + (MT >= 2 ? .3 : 0)) };
 }
 
 // ---------------------------------------------------------------- helpers
@@ -60,7 +73,7 @@ const xc = d => (4.5 * Math.sin(d * .04) + 2.5 * Math.sin(d * .017 + 1)) * smoot
 const xcp = d => (xc(d + .5) - xc(d - .5));
 const gapCache = new Map();
 function gapsFor(k) {
-  if (k < 0) return [];
+  if (k < 0 || k >= nStages()) return [];
   if (gapCache.has(k)) return gapCache.get(k);
   const st = stageDef(k), out = [], L = CFG.stageLen;
   if (st.gaps > 0) {
@@ -95,6 +108,7 @@ function nearGap(d, m) { for (const k of new Set([stageAt(d - m), stageAt(d + m)
 function slopeDeg(d) {
   const { stageLen: L, campLen: C, startFlat } = CFG;
   if (d < startFlat) return d < -20 ? 7 : 0;
+  const D = summitD(); if (d >= D - 6) return d < D + 36 ? 0 : -27 * smooth(D + 36, D + 46, d); // the summit: a flat top, then the far side drops away
   const k = Math.floor(d / L), local = d - k * L;
   if (k >= 1 && local < C) return 0;
   const st = stageDef(k), start = k === 0 ? startFlat : C;
@@ -103,6 +117,7 @@ function slopeDeg(d) {
   return st.deg * smooth(start, start + 14, local) * ledge * (1 + .16 * Math.sin(d * .045));
 }
 const STEP = .5, D0 = -100, Harr = [0];
+function resetHeights() { Harr.length = 1; Hmax = D0; gapCache.clear(); }
 let Hmax = D0;
 function ensureH(d) {
   while (Hmax < d + 2) {
@@ -120,9 +135,10 @@ function H(d) {
 const Hp = d => (H(d + .25) - H(d - .25)) / .5;
 function ridgeAmt(d) {
   const k = stageAt(d), local = d - k * CFG.stageLen;
+  if (k >= nStages()) return 1;
   return stageDef(k).ridge ? smooth(CFG.campLen, CFG.campLen + 12, local) : 0;
 }
-const hwAt = d => lerp(CFG.hw, CFG.ridgeHw, ridgeAmt(d));
+const hwAt = d => { const D = summitD(); return lerp(lerp(CFG.hw, CFG.ridgeHw, ridgeAmt(d)), 10.5, smooth(D - 8, D + 2, d) * (1 - smooth(D + 30, D + 40, d))); };
 // the cliff is always on the left and the open drop on the right, so the view keeps opening up as you climb
 function cliffSide(d) { return -1; }
 function stairs(x, p) { const k = x / p, f = Math.floor(k); return (f + smooth(.3, .72, k - f)) * p; }
@@ -261,7 +277,7 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(3600, 32, 16), new THREE.Sha
   fragmentShader: `uniform vec3 top, horizon, sunCol, sunDir; uniform float dawn; varying vec3 vP;
     void main(){ float h = vP.y; vec3 c = mix(horizon, top, smoothstep(-0.05,0.55,h));
       float s = max(dot(vP, sunDir), 0.0);
-      c += sunCol * (pow(s, 6.0) * 0.55 + pow(s, 120.0) * 2.0) * dawn;
+      c += sunCol * (pow(s, 6.0) * 0.32 + pow(s, 120.0) * 1.2) * dawn;
       c = mix(c, horizon * 0.6, smoothstep(0.0,-0.35,h)); gl_FragColor = vec4(c,1.); }`,
 }));
 sky.frustumCulled = false; sky.renderOrder = -10;
@@ -274,7 +290,7 @@ const stars = (() => {
   p.frustumCulled = false; skyGroup.add(p); return p;
 })();
 const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffd9a0, fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-sunDisc.scale.set(420, 420, 1); skyGroup.add(sunDisc);
+sunDisc.scale.set(260, 260, 1); skyGroup.add(sunDisc);
 
 // ---- the distant world is anchored in height: you climb past the lower ranges, never reach the summit
 const far = new THREE.Group(); scene.add(far);
@@ -299,76 +315,55 @@ function rangeRing(radius, n, hMin, hMax, base, seed, col, colHi) {
 }
 far.add(rangeRing(700, 70, 40, 170, -120, 11, 0x1a1d22, 0x2a2e36));
 far.add(rangeRing(1300, 90, 120, 330, -160, 23, 0x161a22, 0x2a3140));
-// The mountain you are on. A long ridge starts just ahead of you (its foot always level with where you
-// are) and climbs all the way to the summit, so the peak reads as the top of YOUR mountain, not an island
-// across the cloud sea. Lower slopes sink into haze and cloud; the high ridge and the peak stand clear.
-const summit = (() => {
-  const A = [-30, -330], B = [-160, -2500], PEAK = 1380, X0 = -1700, X1 = 1300, Z0 = -3500, Z1 = -260, NX = 120, NZ = 150;
-  const abx = B[0] - A[0], abz = B[1] - A[1], L2 = abx * abx + abz * abz;
-  const hash = (i, j) => { const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return h - Math.floor(h); };
-  const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), u = x - i, v = z - j, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
-    return lerp(lerp(hash(i, j), hash(i + 1, j), su), lerp(hash(i, j + 1), hash(i + 1, j + 1), su), sv); };
-  const ridged = (x, z) => { let a = 0, amp = 1, f = 1; for (let o = 0; o < 5; o++) { a += (1 - Math.abs(vn(x * f, z * f) * 2 - 1)) * amp; amp *= .5; f *= 2.03; } return a / 1.94; };
-  const shape = (x, z) => { // returns [height without your altitude, how much of your altitude to add]
-    const t = clamp(((x - A[0]) * abx + (z - A[1]) * abz) / L2, 0, 1), px = A[0] + abx * t, pz = A[1] + abz * t;
-    const e = Math.hypot(x - px, z - pz), f = Math.pow(t, 2.3), w = lerp(.9, 2.2, Math.sqrt(t));
-    let y = -10 * (1 - f) + PEAK * f - (e / w) * .75 - (e / w) * (e / w) / 900;
-    y += (ridged(x / 240, z / 240) - .55) * lerp(50, 210, t) * smooth(0, 120, e + 60);                   // buttresses and gullies
-    y += 170 * Math.exp(-((x - B[0] - 70) ** 2 + (z - B[1] + 40) ** 2) / (150 * 150));                   // the horn of the summit
-    return [Math.max(y, -420), 1 - f];
-  };
-  const pos = [], aw = [], cols = [], idx = [], tc = new THREE.Color(), lo = new THREE.Color(0x14171d), mid = new THREE.Color(0x30353e), hi = new THREE.Color(0xa6afbd);
+// The mountain you are on, built in the world for each mountain: shaped from the road's own height profile
+// (as if the road were spun around the summit), steeper on the sides away from the road, with gullies.
+// Near you it is carved away (in the shader) so the detailed road, cliff and drop show; ahead it carries the
+// road's line all the way up to the summit temple.
+const hash2 = (i, j) => { const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return h - Math.floor(h); };
+const vnoise = (x, z) => { const i = Math.floor(x), j = Math.floor(z), u = x - i, v = z - j, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+  return lerp(lerp(hash2(i, j), hash2(i + 1, j), su), lerp(hash2(i, j + 1), hash2(i + 1, j + 1), su), sv); };
+const ridged = (x, z) => { let a = 0, amp = 1, f = 1; for (let o = 0; o < 5; o++) { a += (1 - Math.abs(vnoise(x * f, z * f) * 2 - 1)) * amp; amp *= .5; f *= 2.03; } return a / 1.94; };
+const massifUni = { uPd: { value: 0 }, uAlt: { value: 0 }, hazeCol: { value: new THREE.Color() }, hazeMin: { value: 0 } };
+const massifMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
+massifMat.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, massifUni);
+  sh.vertexShader = 'attribute float lat; uniform float uPd; uniform float uAlt; varying float vHaze;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+    `#include <begin_vertex>
+    float rd = -position.z;
+    float nearP = 1.0 - smoothstep(150., 235., rd - uPd);
+    transformed.y -= 80. * (1. - smoothstep(24., 115., abs(lat))) * nearP;
+    vec3 wp = (modelMatrix * vec4(transformed, 1.)).xyz;
+    float dist = length(wp.xz - cameraPosition.xz);
+    // distant slopes are drawn taller than they are (as the eye remembers mountains); it fades out as you get close
+    transformed.y += (wp.y - cameraPosition.y) * 1.5 * smoothstep(220., 1300., dist);
+    wp.y = transformed.y;
+    vHaze = max(.08 + .55 * smoothstep(250., 2800., dist), (1. - smoothstep(uAlt - 150., uAlt + 20., wp.y)) * .5);`);
+  sh.fragmentShader = 'uniform vec3 hazeCol; uniform float hazeMin; varying float vHaze;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
+    'gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeCol, max(vHaze, hazeMin));\n#include <dithering_fragment>');
+};
+let massif = null;
+function buildMassif() {
+  if (massif) { scene.remove(massif); massif.geometry.dispose(); }
+  const D = summitD(), sx = xc(D), sz = -D, top = H(D);
+  beacon.position.set(xc(D + 16), H(D + 16) + 12, -(D + 16));
+  const X0 = sx - 2200, X1 = sx + 2200, Z0 = sz - 1700, Z1 = 900, NX = 150, NZ = 160;
+  const pos = [], cols = [], lat = [], idx = [], tc = new THREE.Color(), snowC = new THREE.Color(0xdfe6ef), rockC = new THREE.Color(0x4a4d55), grassC = new THREE.Color(0x3c4630), darkC = new THREE.Color(0x24262c);
   for (let j = 0; j <= NZ; j++) for (let i = 0; i <= NX; i++) {
-    const x = X0 + (X1 - X0) * i / NX, z = Z0 + (Z1 - Z0) * Math.pow(j / NZ, .8);
-    const [y, w] = shape(x, z), yw = y + 150 * w;                       // colour as if you were ~180 m up
-    pos.push(x, y, z); aw.push(w);
-    const snow = smooth(520, 860, yw + (ridged(x / 90, z / 90) - .5) * 160), rock = smooth(-100, 300, yw);
-    tc.copy(lo).lerp(mid, rock).lerp(hi, snow * .9); cols.push(tc.r, tc.g, tc.b);
+    const x = X0 + (X1 - X0) * i / NX, z = Z0 + (Z1 - Z0) * j / NZ;
+    const dx = x - sx, dz = z - sz, r = Math.hypot(dx, dz), c = r > 1 ? dz / r : 1;      // c = 1 straight down the road, -1 behind the summit
+    const side = (1 - c) / 2, k = 1 + 1.7 * side * side + .5 * Math.abs(dx) / (r + 200);
+    const rn = ridged(x / 210, z / 210), cut = (1 - rn) * lerp(4, 95, smooth(60, 1100, r)) * (1 - .6 * Math.max(0, c) * (1 - smooth(10, 60, Math.abs(x - xc(-z)))));
+    const y = Math.min(top - 1, H(D - r * k)) - 18 * smooth(30, 160, r) - cut;
+    pos.push(x, y, z); lat.push(x - xc(-z));
+    const sn = smooth(.1, .5, snowAt(y + (rn - .5) * 60) + (rn > .62 ? .15 : 0)), gr = grassAt(y) * smooth(.3, .6, rn);
+    tc.copy(rockC).lerp(darkC, smooth(.45, .15, rn) * .7).lerp(grassC, gr).lerp(snowC, sn); cols.push(tc.r, tc.g, tc.b);
   }
   for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-  g.setAttribute('aw', new THREE.Float32BufferAttribute(aw, 1)); g.setIndex(idx); g.computeVertexNormals();
-  const uni = { uAlt: { value: 0 }, hazeCol: { value: new THREE.Color() }, hazeMin: { value: 0 } };
-  const ridgeMat = (hazeK, extra) => { const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false, ...extra }); m.onBeforeCompile = sh => {
-    Object.assign(sh.uniforms, uni);
-    sh.vertexShader = 'attribute float aw; uniform float uAlt; varying float vHaze;\n' + sh.vertexShader.replace('#include <begin_vertex>',
-      `#include <begin_vertex>
-      transformed.y += uAlt * aw;
-      float hd = length(position.xz);
-      vHaze = max(.14 + .3 * smoothstep(600., 3400., hd), (1. - smoothstep(uAlt - 40., uAlt + 380., transformed.y)) * .74);`);
-    sh.fragmentShader = 'uniform vec3 hazeCol; uniform float hazeMin; varying float vHaze;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
-      `gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeCol, max(vHaze * ${hazeK.toFixed(2)}, hazeMin));\n#include <dithering_fragment>`);
-  }; return m; };
-  const mat = ridgeMat(1, {});
-  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; far.add(m); m.userData.uni = uni;
-  { // the old stone path: it carries on from the end of your road and switchbacks up the ridge to the summit
-    const pts = [], ax = abx / Math.sqrt(L2), az = abz / Math.sqrt(L2), nx = -az, nz = ax, N = 900;
-    for (let i = 0; i <= N; i++) {
-      const t = i / N, u = 2.2 * t + 3.8 * t * t;                             // legs get shorter as it steepens (7 switchbacks in all)
-      const leg = Math.floor(u), f = u - leg, sgn = leg % 2 ? -1 : 1, tri = sgn * (1 - 2 * f) * -1;   // zig-zag from side to side
-      const amp = lerp(40, 120, t) * (.7 + .5 * lerp(hash(leg, 3), hash(leg + 1, 3), f)) * smooth(0, .04, t) * (1 - smooth(.9, 1, t)) + 12 * Math.sin(t * 61);
-      const cx = A[0] + abx * t + nx * tri * amp, cz = A[1] + abz * t + nz * tri * amp;
-      pts.push([cx, cz]);
-    }
-    const pos = [], aw = [], cols = [], idx = [], pc = new THREE.Color(0x9a8b74);
-    pts.forEach(([x, z], i) => {
-      const [x0, z0] = pts[Math.max(0, i - 1)], [x1, z1] = pts[Math.min(N, i + 1)], dl = Math.hypot(x1 - x0, z1 - z0) || 1;
-      const ox = -(z1 - z0) / dl, oz = (x1 - x0) / dl, hw = lerp(4, 9, i / N);
-      for (const sd of [-1, 1]) { const vx = x + ox * hw * sd, vz = z + oz * hw * sd, [y, w] = shape(vx, vz); pos.push(vx, y + 2.5, vz); aw.push(w); cols.push(pc.r, pc.g, pc.b); }
-      if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
-    });
-    const pg = new THREE.BufferGeometry();
-    pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    pg.setAttribute('aw', new THREE.Float32BufferAttribute(aw, 1)); pg.setIndex(idx);
-    const path = new THREE.Mesh(pg, ridgeMat(.55, { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
-    path.frustumCulled = false; far.add(path); m.userData.path = path;
-  }
-  const top = shape(B[0] + 70, B[1] - 40)[0];
-  const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .55, .25).multiplyScalar(2.2), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  beacon.scale.set(40, 40, 1); beacon.position.set(B[0] + 70, top + 14, B[1] - 40); m.add(beacon); m.userData.beacon = beacon;
-  return m;
-})();
+  g.setAttribute('lat', new THREE.Float32BufferAttribute(lat, 1)); g.setIndex(idx); g.computeVertexNormals();
+  massif = new THREE.Mesh(g, massifMat); massif.frustumCulled = false; scene.add(massif);
+}
 // a village far down in the valley: warm firelight that shrinks away as you climb
 {
   const n = 170, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), R = mulberry(5), c = new THREE.Color();
@@ -800,9 +795,34 @@ function buildGate(w, hgt) { // a great block of grey stone that grinds back and
   const ring = new THREE.Mesh(new THREE.TorusGeometry(.26, .06, 8, 20), bronzeMat); ring.position.set(0, hgt * .1, .5); grp.add(ring);
   return grp;
 }
+let temple = null;
+function buildTemple() {
+  const D = summitD(), d = D + 16, cx = xc(d), y = H(d), grp = new THREE.Group(); grp.position.set(cx, y, -d);
+  [[9.2, .55, -.2], [8.5, .55, .35], [7.9, .55, .9]].forEach(([r, h, yy]) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r + .15, h, 48), oldStoneMat); m.position.y = yy; m.receiveShadow = true; m.castShadow = true; grp.add(m); });
+  const floor = 1.17, colH = 6.4;
+  for (let i = 0; i < 8; i++) {
+    const a = (i + .5) / 8 * Math.PI * 2, x = Math.cos(a) * 7.2, z = Math.sin(a) * 7.2;
+    const sh = new THREE.Mesh(COL_SHAFT, marbleStoneMat); sh.scale.set(1, colH / 7.6, 1); sh.position.set(x, floor + colH / 2, z); sh.castShadow = true; grp.add(sh);
+    const cap = new THREE.Mesh(COL_CAP, marbleStoneMat); cap.position.set(x, floor + colH + .2, z); grp.add(cap);
+    const ab = boxMesh(1.6, .35, 1.6, marbleStoneMat); ab.position.set(x, floor + colH + .58, z); ab.rotation.y = -a; grp.add(ab);
+  }
+  const ent = new THREE.Mesh(new THREE.CylinderGeometry(8.1, 8.1, 1.1, 48, 1, true), marbleStoneMat); ent.material = marbleStoneMat; ent.position.y = floor + colH + 1.3; grp.add(ent);
+  const entIn = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 6.4, 1.1, 48, 1, true), marbleStoneMat); entIn.position.y = ent.position.y; grp.add(entIn);
+  const ringTop = new THREE.Mesh(new THREE.RingGeometry(6.4, 8.1, 48), marbleStoneMat); ringTop.rotation.x = -Math.PI / 2; ringTop.position.y = ent.position.y + .55; grp.add(ringTop);
+  const altar = new THREE.Mesh(BLOCK_GEO, marbleStoneMat); altar.scale.set(3.4, 1.3, 3.4); altar.position.y = floor + .65; altar.castShadow = true; grp.add(altar);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.9, .12, 8, 40), bronzeMat); ring2.rotation.x = Math.PI / 2; ring2.position.y = floor + 1.33; grp.add(ring2);
+  for (const sd of [-1, 1]) { const bz = brazier(1.3); bz.position.set(sd * 4.6, floor, 5.6); grp.add(bz); }
+  grp.userData.altarY = y + floor + 1.3;
+  scene.add(grp); return grp;
+}
+const beaconMats = [new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .6, .25).multiplyScalar(2.4), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+  new THREE.SpriteMaterial({ map: flameTex, color: 0xffc070, fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })];
+const beacon = new THREE.Group(); beacon.add(new THREE.Sprite(beaconMats[0])); beacon.add(new THREE.Sprite(beaconMats[1])); scene.add(beacon);
+beacon.children[0].scale.setScalar(34); beacon.children[1].scale.set(7, 12, 1); beacon.children[1].position.y = 3;
 function buildStage(k) {
   if (builtStages.has(k)) return;
   builtStages.add(k);
+  if (k >= nStages()) { if (k === nStages() && !temple) temple = buildTemple(); return; }
   const R = mulberry(k * 7919 + 13), st = stageDef(k), L = CFG.stageLen, base = k * L, C = CFG.campLen;
   if (k >= 1) camps.push(buildCamp(k));
   const start = k === 0 ? 30 : C + 14, end = L - 10;
@@ -925,12 +945,15 @@ const J = {}; // bones
   const bones = BODY_BONE_NAMES.map(n => J[n]);
   // the marble body arrives a moment after load (it's unpacked in the background)
   loadBodyGeometry().then(geo => {
-    root.updateMatrixWorld(true);
+    // bind in the rest pose (the walk may already be posing the bones by the time the body arrives)
+    const saved = bones.map(b => [b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+    for (const [name, [, x, y, z]] of Object.entries(BODY_BONES)) { J[name].position.set(x, y, z); J[name].quaternion.identity(); J[name].scale.set(1, 1, 1); }
     const mesh = new THREE.SkinnedMesh(geo, marble);
     mesh.castShadow = true; mesh.frustumCulled = false;
     root.add(mesh);
     root.updateMatrixWorld(true);
     mesh.bind(new THREE.Skeleton(bones));
+    bones.forEach((b, i) => { b.position.copy(saved[i][0]); b.quaternion.copy(saved[i][1]); b.scale.copy(saved[i][2]); });
     P.body = mesh;
   }).catch(err => console.warn('body', err));
   // drapery: hip wrap with deep folds, gold belt
@@ -1249,6 +1272,10 @@ const sfx = {
   hurt() { tone(160, 'square', .15, .2, .4); noise(.25, .25, 500, .6, 'lowpass'); },
   rockfall() { noise(.1, .7, 200, .5, 'lowpass'); },
   save() { [12, 16, 19].forEach((n, i) => tone(440 * Math.pow(2, n / 12), 'triangle', .12, .3, 0, i * .05)); },
+  summit() { [0, 4, 7, 12, 16, 19, 24, 28].forEach((n, i) => { tone(262 * Math.pow(2, n / 12), 'triangle', .14, 1.4 - i * .1, 0, i * .09); tone(131 * Math.pow(2, n / 12), 'sine', .08, 1.6, 0, i * .09); }); noise(.25, 2.2, 1400, .4, 'bandpass', .6); },
+  rollback() { noise(.35, 3.2, 120, .6, 'lowpass'); [0, -2, -4, -7, -9, -12].forEach((n, i) => tone(196 * Math.pow(2, n / 12), 'sawtooth', .05, .5, .9, i * .4)); },
+  zeusWarn() { tone(1800, 'sine', .04, .9, .5); noise(.06, .9, 3000, 2, 'bandpass'); },
+  thunder() { noise(.7, .25, 3000, .5, 'highpass'); noise(.6, 2.4, 90, .6, 'lowpass', .05); tone(48, 'sine', .4, 1.6, .5); },
   over() { [12, 7, 3, 0].forEach((n, i) => tone(330 * Math.pow(2, n / 12), 'triangle', .14, .5, 0, i * .14)); },
 };
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
@@ -1262,7 +1289,7 @@ const PERKS = {
   focus:    { name: 'Focus', desc: 'Time slows while you wind up near the boulder.', max: 1, ic: '◔', col: '#a77bff', chip: 'FOCUS' },
   shield:   { name: 'Bronze Armour', desc: 'Shrug off one hit per stage from rocks or stone blocks.', max: 1, ic: '⛨', col: '#c9d2de', chip: 'ARMOUR' },
   backstop: { name: 'Backstop', desc: 'Once per stage, catch a boulder that gets past you.', max: 1, ic: '↺', col: '#ff3fb4', chip: 'SAVE' },
-  spare:    { name: 'Spare Boulder', desc: '+1 boulder now and +1 max.', max: 2, ic: '●', col: '#ff8a3a', chip: 'SPARE' },
+  chain:    { name: 'Chain Death', desc: 'Once per mountain: lose the boulder and Death is chained up instead. It comes back.', max: 1, ic: '⛓', col: '#b7c0cc', chip: 'CHAIN' },
   magnet:   { name: 'Lodestone', desc: 'Coins drift toward the boulder.', max: 1, ic: 'Ʊ', col: '#3ef6ff', chip: 'MAGNET' },
   steady:   { name: 'Sure Footing', desc: 'Faster steering. Bumps don\'t break your combo.', max: 1, ic: '≡', col: '#9fe870', chip: 'TRACKS' },
 };
@@ -1275,7 +1302,8 @@ function offerPerks(campK) {
   if (!pick.length) return;
   perkChoices = pick; mode = 'perk';
   P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on');
-  $('#pTitle').textContent = `CAMP ${campK}`;
+  $('#pTitle').textContent = typeof campK === 'string' ? campK : `CAMP ${campK}`;
+  $('#pSub').textContent = typeof campK === 'string' ? 'The gods offer you a gift' : 'Choose an advantage';
   const box = $('#pCards'); box.innerHTML = '';
   for (const k of pick) {
     const p = PERKS[k], b = document.createElement('button'); b.className = 'card';
@@ -1288,11 +1316,11 @@ function offerPerks(campK) {
 }
 function takePerk(k) {
   S.perks[k]++;
-  if (k === 'spare') { S.maxLives++; S.lives++; }
+  if (k === 'chain') S.chainReady = true;
   if (k === 'shield') S.shieldReady = true;
   if (k === 'backstop') S.backstopReady = true;
   sfx.perk(); buzz(20);
-  $('#perks').classList.add('hide'); perkChoices = null; mode = 'play'; S.grace = 1.2;
+  $('#perks').classList.add('hide'); perkChoices = null; mode = sumFx.active ? 'summit' : 'play'; S.grace = 1.2; if (sumFx.active) { sumFx.phase = 2; sumFx.t = 0; }
   pop(PERKS[k].name.toUpperCase(), P.p.clone().setY(P.p.y + 4), 'big');
   chips();
 }
@@ -1302,25 +1330,31 @@ function chips() {
     if (!S.perks[k]) continue;
     const s = document.createElement('span');
     s.textContent = PERKS[k].chip + (PERKS[k].max > 1 ? ' ' + S.perks[k] : '');
-    if ((k === 'shield' && !S.shieldReady) || (k === 'backstop' && !S.backstopReady)) s.className = 'off';
+    if ((k === 'shield' && !S.shieldReady) || (k === 'backstop' && !S.backstopReady) || (k === 'chain' && !S.chainReady)) s.className = 'off';
     el.appendChild(s);
   }
 }
 
 // ---------------------------------------------------------------- game state
 let mode = 'title';
-const S = { score: 0, bonus: 0, maxAlt: 0, lives: 3, maxLives: 3, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4,
-  longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 0, pendingPerk: 0, hitstop: 0, best: store.get('summit-best-v3', 0) };
+const S = { score: 0, bonus: 0, maxAlt: 0, lives: 1, maxLives: 1, baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0, fallFrom: 0, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4,
+  longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 0, pendingPerk: 0, hitstop: 0, best: store.get('summit-best-h1', 0) };
+const total = () => Math.round(S.baseAlt + Math.max(0, S.maxAlt));
+const FARE = () => 30 + 20 * MT;
+const sumFx = { active: false, phase: 0, t: 0, dawn: 0, from: new THREE.Vector3(), walk: 0, next: '' };
 const cam = { x: 0, y: 5, z: 8, shake: 0, lookY: 0, lookX: 0, kick: 0 };
 function resetWorld() {
   for (const c of [...chunks.keys()]) { disposeGroup(chunks.get(c)); chunks.delete(c); }
   for (const arr of [rocks, gates, cells]) { for (const o of arr) disposeGroup(o.mesh); arr.length = 0; }
   for (const c of camps) disposeGroup(c.mesh); camps.length = 0;
+  if (temple) { disposeGroup(temple); temple = null; }
+  for (const z of bolts) scene.remove(z.mesh); bolts.length = 0;
   for (const t of tumblers) scene.remove(t.mesh); tumblers.length = 0;
   builtStages.clear(); work.length = 0; queued.clear();
   Object.assign(P, { d: 0, off: 0, toff: 0, stun: 0, stagger: 0, charge: 0, charging: false, release: 0, cool: 0, bumpCool: 0, guard: 0, block: 0, cheer: 0, bonk: 0, coil: 0, punchT: -1, air: -1 });
   P.p.set(xc(0), G(0, xc(0)), 0);
   placeBall(11, 0, .5);
+  buildMassif();
   updateChunks(0, true);
 }
 function placeBall(d, off, lift = 3) {
@@ -1328,32 +1362,151 @@ function placeBall(d, off, lift = 3) {
   ball.p.set(x, G(d, x) + ball.r + lift, -d); ball.v.set(0, 0, 0); ball.lost = 0; ball.heat = 0; ball.flying = false;
 }
 function start() {
-  if (mode === 'play' || mode === 'perk') return;
+  if (mode !== 'title' && mode !== 'over') return;
   audio();
-  Object.assign(S, { score: 0, bonus: 0, maxAlt: 0, lives: 3, maxLives: 3, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4, longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 1.5, pendingPerk: 0, hitstop: 0 });
+  MT = 0; resetHeights(); sumFx.active = false; sumFx.dawn = 0; $('#fade').classList.remove('on');
+  Object.assign(S, { baseAlt: 0, summits: 0, obols: 0, charonUsed: false, chainReady: false, fallT: 0 });
+  Object.assign(S, { score: 0, bonus: 0, maxAlt: 0, lives: 1, maxLives: 1, mult: 1, perfects: 0, cells: 0, camps: 0, stage: 0, time: 0, tumbleT: 4, longest: 0, perks: perkLv(), shieldReady: false, backstopReady: false, grace: 1.5, pendingPerk: 0, hitstop: 0 });
   resetWorld(); chips();
   mode = 'play';
   window.BounceLab && BounceLab.start();
   $('#title').classList.add('hide'); $('#over').classList.add('hide'); $('#hud').classList.remove('hide');
-  banner('THE FOOTHILLS', 'Hold anywhere to wind up · slide to steer · let go to punch');
+  banner(mountainDef().name.toUpperCase(), 'Get the boulder to the summit · hold to wind up, slide to steer, let go to punch');
   hud();
 }
-const QUOTES = ['One must imagine Sisyphus happy.', 'The struggle itself toward the heights is enough to fill a heart.', 'The summit was always a little further.', 'He was bored anyway.', 'Back to the bottom. Again.', 'Sisyphus yawns.'];
+const QUOTES = ['One must imagine Sisyphus happy.', 'The boulder always comes back down. So does he.', 'The struggle itself toward the heights is enough to fill a heart.', 'The summit was always a little further.', 'He was bored anyway.', 'Back to the bottom. Again.', 'Sisyphus yawns.'];
 function gameOver() {
   mode = 'over'; sfx.over(); drag = null; P.charging = false; $('#touch').classList.remove('on');
   if (chargeGain) chargeGain.gain.value = 0;
-  const score = S.score, isBest = score > S.best;
-  if (isBest) { S.best = score; store.set('summit-best-v3', score); }
-  $('#oScore').textContent = score;
-  $('#oBest').textContent = isBest ? 'New best!' : 'Best ' + S.best;
-  $('#oAlt').textContent = Math.round(S.maxAlt) + ' m';
-  $('#oCamps').textContent = S.camps;
+  const score = total(), isBest = score > S.best;
+  if (isBest) { S.best = score; store.set('summit-best-h1', score); }
+  $('#oScore').textContent = score + ' m';
+  $('#oBest').textContent = isBest ? 'New best!' : 'Best ' + S.best + ' m';
+  $('#oAlt').textContent = S.summits;
+  $('#oCamps').textContent = mountainDef().name;
+  $('#oPts').textContent = S.score;
   $('#oPerf').textContent = S.perfects;
   $('#oThrow').textContent = Math.round(S.longest) + ' m';
-  $('#oShards').textContent = S.cells;
+  $('#oShards').textContent = S.obols;
   $('#oQuote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-  window.BounceLab && BounceLab.gameOver(score, { altitude: Math.round(S.maxAlt), camps: S.camps, perfects: S.perfects, longest: Math.round(S.longest) });
+  window.BounceLab && BounceLab.gameOver(score, { height: score, summits: S.summits, mountain: mountainDef().name, points: S.score, camps: S.camps, perfects: S.perfects, longest: Math.round(S.longest) });
   $('#over').classList.remove('hide'); $('#hud').classList.add('hide'); $('#perkChips').innerHTML = '';
+}
+function restoreBoulder(t, sub) {
+  let d = P.d + 12; while (nearGap(d, 4)) d += 1.5;
+  placeBall(Math.min(d, summitD() - 4), P.off * .4, 3);
+  for (const tb of tumblers) if (Math.abs(-tb.p.z - d) < 10) tb.p.y -= 100;
+  banner(t, sub); sfx.save(); ring(ball.p, 0xffd27a, 5);
+  if (S.pendingPerk) { const k = S.pendingPerk; S.pendingPerk = 0; offerPerks(k); }
+}
+// Charon, the ferryman of the dead, will row your boulder back out of the underworld. For a fee.
+function offerCharon() {
+  mode = 'charon'; P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on');
+  $('#cFare').textContent = FARE(); $('#cHave').textContent = S.obols;
+  $('#charon').classList.remove('hide'); sfx.lost();
+}
+function payCharon(yes) {
+  if (mode !== 'charon') return;
+  $('#charon').classList.add('hide');
+  if (yes) { S.obols -= FARE(); S.charonUsed = true; mode = 'play'; restoreBoulder('CHARON IS PAID', 'He rows it back from the underworld. Once per mountain.'); }
+  else beginFall();
+}
+// the end of a run: the boulder rolls all the way back down and your height runs back to zero
+function beginFall() {
+  mode = 'fall'; S.fallT = 0; S.fallFrom = total(); ball.lost = 0;
+  P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); $('#charon').classList.add('hide');
+  if (chargeGain) chargeGain.gain.value = 0;
+  cine.pos.copy(camera.position); cine.look.copy(lookAt);
+  if (-ball.p.z > P.d - 2) ball.v.set(rnd(-1, 1), 2, 12);                 // it still has to come back down past you
+  sfx.rollback(); $('#fallCount').classList.add('on');
+}
+// ---------------------------------------------------------------- the summit
+function beginSummit() {
+  mode = 'summit'; sumFx.active = true; sumFx.phase = 0; sumFx.t = 0; sumFx.from.copy(ball.p); sumFx.pd = P.d;
+  P.charging = false; P.charge = 0; drag = null; $('#touch').classList.remove('on'); if (chargeGain) chargeGain.gain.value = 0;
+  for (const z of bolts) scene.remove(z.mesh); bolts.length = 0;
+  S.summits++; S.maxAlt = H(summitD());
+  const bonus = 1000 * (MT + 1); S.bonus += bonus * S.mult;
+  cine.pos.copy(camera.position); cine.look.copy(lookAt);
+  if (!temple) temple = buildTemple();
+  sfx.summit(); buzz([40, 60, 40, 60, 120]);
+  sumFx.next = mountainDef(MT + 1).name;
+  banner(`SUMMIT · ${mountainDef().name.toUpperCase()}`, `${total()} m climbed · +${bonus * S.mult} · the gods are watching`);
+}
+function stepSummit(dt) {
+  const f = sumFx, D = summitD(), tc = new THREE.Vector3(xc(D + 16), temple.userData.altarY + ball.r, -(D + 16));
+  f.t += dt; f.dawn = Math.min(1, f.dawn + dt * .6);
+  if (f.phase === 0) { // the boulder settles on the altar; Sisyphus walks up behind it and throws his fists up
+    const k = smooth(0, 1.6, f.t);
+    ball.p.lerpVectors(f.from, tc, k); ball.p.y += Math.sin(k * Math.PI) * 3; ball.v.set(0, 0, 0);
+    f.walk = f.t < 1.4 ? 4 : 0; P.d = lerp(f.pd, Math.max(f.pd, D + 3), smooth(0, 1.5, f.t)); P.off = lerp(P.off, 0, dt * 2);
+    P.p.set(xc(P.d) + P.off, G(P.d, xc(P.d) + P.off), -P.d);
+    if (f.t > 1.4) P.cheer = 1;
+    if (f.t > 1.5 && (f.t * 3 | 0) !== ((f.t - dt) * 3 | 0) && f.t < 3.6) { dustAt.copy(tc).setY(tc.y + 3); burst(dustAt, 34, 0xffd25a, 9, new THREE.Vector3(0, 1, 0), 3, [1, 2.2]); burst(dustAt, 14, 0x9fd36a, 6, new THREE.Vector3(0, 1, 0), 2, [1.2, 2.4]); }
+    if (f.t > 1.55 && f.t - dt <= 1.55) { ring(tc, 0xffd27a, 9); cam.shake = .25; sfx.camp(); }
+    if (f.t > 4.2) { f.phase = 1; offerPerks('GIFT OF THE GODS'); if (mode !== 'perk') { f.phase = 2; f.t = 0; } }
+  } else if (f.phase === 2) { // ...but the boulder never stays. It tips off the far side and rolls down to the next mountain
+    P.cheer = Math.max(0, P.cheer - dt);
+    if (f.t < .9) { ball.p.copy(tc); ball.p.x += Math.sin(f.t * 40) * .06 * f.t; }
+    else { if (f.t - dt < .9) { ball.v.set(0, 2, -7); banner('...BUT THE BOULDER NEVER STAYS', `It rolls down to the foot of ${f.next}`); sfx.rollback(); } stepSphere(ball, dt, false); }
+    if (f.t > 4.6 && !$('#fade').classList.contains('on')) $('#fade').classList.add('on');
+    if (f.t > 5.4) nextMountain();
+  }
+}
+function nextMountain() {
+  S.baseAlt += H(summitD()); S.maxAlt = 0;
+  MT++; resetHeights(); sumFx.active = false; sumFx.dawn = 0;
+  S.charonUsed = false; S.chainReady = !!S.perks.chain; if (S.perks.shield) S.shieldReady = true; if (S.perks.backstop) S.backstopReady = true;
+  resetWorld(); chips(); mode = 'play'; S.grace = 1.5; S.mult = 1;
+  setTimeout(() => $('#fade').classList.remove('on'), 120);
+  banner(mountainDef().name.toUpperCase(), `Summit ${MT + 1} · ${mountainDef().sub}`);
+}
+// ---------------------------------------------------------------- Zeus's lightning: a glow on the ground, then a bolt
+const bolts = [];
+const boltWarnMat = new THREE.MeshBasicMaterial({ map: glowTex, color: new THREE.Color(.7, .82, 1).multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+const boltMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(.85, .92, 1).multiplyScalar(3.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+const WARN_GEO = new THREE.CircleGeometry(2.6, 32).rotateX(-Math.PI / 2);
+function boltGeo() { // a jagged ribbon from the sky to the ground, with a couple of forks
+  const pos = [], idx = []; let x = 0, z = 0;
+  const strand = (x0, z0, y0, y1, w, n) => { let px = x0, pz = z0; for (let i = 0; i <= n; i++) { const y = lerp(y0, y1, i / n), b = pos.length / 3; if (i) { px += rnd(-1.3, 1.3); pz += rnd(-1.3, 1.3); } if (i === n) { px = x0 * .0; pz = z0 * 0; } pos.push(px - w, y, pz, px + w, y, pz); if (i) idx.push(b - 2, b - 1, b, b - 1, b + 1, b); } };
+  strand(rnd(-6, 6), rnd(-6, 6), 60, 0, .22, 14);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g;
+}
+let zeusT = 3;
+function stepZeus(dt) {
+  const st = stageDef(stageAt(P.d));
+  if (st.zeus > 0 && mode === 'play' && P.d < summitD() - 20) {
+    zeusT -= dt;
+    if (zeusT <= 0) {
+      zeusT = (2.6 + rnd(0, 1.6)) / (.6 + st.zeus * .4);
+      const onBall = !ball.lost && Math.random() < .35, d = onBall ? -ball.p.z + rnd(-1, 1) : P.d + rnd(7, 13), off = onBall ? ball.p.x - xc(d) : clamp(P.toff + rnd(-1.2, 1.2), -hwAt(d) + 1, hwAt(d) - 1);
+      if (!openGap(d, xc(d) + off)) {
+        const m = new THREE.Mesh(WARN_GEO, boltWarnMat.clone()); scene.add(m);
+        bolts.push({ d, off, t: 0, mesh: m, struck: false }); sfx.zeusWarn();
+      }
+    }
+  }
+  for (let i = bolts.length - 1; i >= 0; i--) {
+    const z = bolts[i]; z.t += dt;
+    const x = xc(z.d) + z.off, y = G(z.d, x);
+    if (!z.struck) {
+      z.mesh.position.set(x, y + .12, -z.d); z.mesh.material.opacity = .25 + .6 * (z.t / 1.15) + Math.sin(z.t * 30) * .12;
+      z.mesh.scale.setScalar(1.15 - .25 * z.t);
+      if (z.t >= 1.15) { // strike!
+        z.struck = true; z.t = 0; z.mesh.material.dispose(); scene.remove(z.mesh);
+        z.mesh = new THREE.Mesh(boltGeo(), boltMat); z.mesh.position.set(x, y, -z.d); scene.add(z.mesh);
+        sfx.thunder(); cam.shake = Math.max(cam.shake, .35); $('#zap').classList.add('on'); setTimeout(() => $('#zap').classList.remove('on'), 70);
+        dustAt.set(x, y + .3, -z.d); burst(dustAt, 26, 0xcfe0ff, 9, new THREE.Vector3(0, 1, 0), 10); dust(dustAt, 12, 4);
+        if (Math.hypot(P.p.x - x, P.p.z + z.d) < 2.8) hitTitan('ZEUS!');
+        if (!ball.lost && Math.hypot(ball.p.x - x, ball.p.z + z.d) < 2.6 + ball.r * .5) { // Zeus knocks your boulder back down at you
+          ball.v.set(rnd(-2, 2), 9, 9); ball.flying = false; ball.heat = 1.2; pop('ZEUS!', ball.p.clone().setY(ball.p.y + 2.5), 'bad'); S.mult = 1;
+        }
+      }
+    } else {
+      z.mesh.visible = z.t < .28 && (z.t * 30 | 0) % 3 !== 2;
+      if (z.t > .3) { scene.remove(z.mesh); z.mesh.geometry.dispose(); bolts.splice(i, 1); }
+    }
+  }
 }
 function banner(t, s) {
   $('#bTitle').textContent = t; $('#bSub').textContent = s || '';
@@ -1363,14 +1516,14 @@ let livesShown = '';
 const hudCache = {};
 function setText(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
 function hud() {
-  setText('#score', String(S.score));
+  setText('#score', total() + ' m');
   const nextCamp = stageAt(P.d) + 1;
-  setText('#alt', `${Math.max(0, Math.round(H(P.d)))} m · ${speedNow().toFixed(1)} m/s`);
-  setText('#campT', `CAMP ${nextCamp}`);
+  setText('#alt', `${mountainDef().name} · top ${Math.round(H(summitD()))} m`);
+  setText('#campT', nextCamp >= nStages() ? 'SUMMIT' : `CAMP ${nextCamp}`);
+  setText('#obols', String(S.obols));
   $('#progFill').style.transform = `scaleX(${clamp((P.d - (nextCamp - 1) * CFG.stageLen) / CFG.stageLen, 0, 1).toFixed(3)})`;
   setText('#mult', '×' + S.mult); $('#mult').classList.toggle('hot', S.mult > 1);
-  const key = S.lives + '/' + S.maxLives;
-  if (livesShown !== key) { const l = $('#lives'); l.innerHTML = ''; for (let i = 0; i < S.maxLives; i++) { const e = document.createElement('i'); if (i >= S.lives) e.style.opacity = .2; l.appendChild(e); } livesShown = key; }
+
 }
 function addPoints(n, at, label, cls) { const v = Math.round(n * S.mult); S.bonus += v; pop(label ? label.replace('#', v) : '+' + v, at, cls || ''); }
 const speedNow = () => Math.min(CFG.speedMax, CFG.speed0 + CFG.speedStep * stageAt(P.d));
@@ -1417,6 +1570,8 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
 $('#playBtn').addEventListener('click', start);
 $('#againBtn').addEventListener('click', start);
+$('#payBtn').addEventListener('click', () => payCharon(true));
+$('#letBtn').addEventListener('click', () => payCharon(false));
 $('#mute').addEventListener('click', () => { muted = !muted; store.set('summit-muted', muted); $('#mute').textContent = muted ? '🔇' : '🔊'; if (master) master.gain.value = muted ? 0 : .55; });
 $('#mute').textContent = muted ? '🔇' : '🔊';
 $('#bestT').textContent = S.best ? 'Best ' + S.best : '';
@@ -1659,7 +1814,7 @@ function update(dt) {
     const byBall = ball.p.distanceTo(sp) < ball.r + .7;
     const byTitan = Math.hypot(P.p.x - sp.x, P.p.z - sp.z) < CFG.bodyR + .5 && sp.y < P.p.y + 3.2;
     if (byBall || byTitan) {
-      s.taken = true; S.cells++;
+      s.taken = true; S.cells++; S.obols += [1, 3, 10][s.tier];
       addPoints(CELL[s.tier].val * (byBall ? 1 : .5), sp, null, s.tier ? 'big' : '');
       sfx.cell(s.tier); burst(sp, 18, CELL[s.tier].col, 5, null, 4);
       s.mesh.visible = false;
@@ -1670,7 +1825,6 @@ function update(dt) {
       c.reached = true; S.camps = Math.max(S.camps, c.k);
       const bonus = 150 * c.k;
       S.bonus += bonus * S.mult;
-      if (S.lives < S.maxLives) S.lives++;
       if (S.perks.shield) S.shieldReady = true;
       if (S.perks.backstop) S.backstopReady = true;
       sfx.camp(); buzz([20, 40, 20, 40, 60]);
@@ -1701,16 +1855,14 @@ function update(dt) {
   } else {
     ball.lost -= dt;
     if (ball.lost <= 0) {
-      S.lives--;
-      if (S.lives <= 0) { ball.lost = 0; gameOver(); return; }
-      let d = P.d + 12; while (nearGap(d, 4)) d += 1.5;
-      placeBall(d, P.off * .4, 3);
-      for (const t of tumblers) if (Math.abs(-t.p.z - d) < 10) t.p.y -= 100;
-      banner(S.lives === 1 ? 'LAST BOULDER' : 'A NEW BOULDER', S.lives === 1 ? 'Make it count.' : `${S.lives} left`);
-      if (S.pendingPerk) { const k = S.pendingPerk; S.pendingPerk = 0; offerPerks(k); }
+      if (S.chainReady) { S.chainReady = false; chips(); restoreBoulder('DEATH IS CHAINED', 'Your boulder comes back. Once per mountain.'); }
+      else if (!S.charonUsed && S.obols >= FARE()) { ball.lost = 0; offerCharon(); return; }
+      else { beginFall(); return; }
     }
   }
-  if (!ball.lost) S.maxAlt = Math.max(S.maxAlt, H(Math.min(-ball.p.z, P.d + 30)));
+  if (!ball.lost) S.maxAlt = Math.max(S.maxAlt, H(Math.min(-ball.p.z, P.d + 30, summitD())));
+  if (!ball.lost && -ball.p.z > summitD() + 2 && ball.p.y > H(summitD()) - 3) { beginSummit(); return; }
+  stepZeus(dt);
   S.score = Math.round(S.maxAlt * 10) + S.bonus;
   S.stage = stageAt(P.d);
   updateChunks(P.d);
@@ -1718,6 +1870,7 @@ function update(dt) {
 }
 
 // ---------------------------------------------------------------- visuals per frame
+const cine = { pos: new THREE.Vector3(), look: new THREE.Vector3() }, camT = new THREE.Vector3(), lookT = new THREE.Vector3();
 const lookAt = new THREE.Vector3(), scrA = new THREE.Vector3(), scrB = new THREE.Vector3(), scrC = new THREE.Vector3();
 const NIGHT_TOP = new THREE.Color(0x060a18), NIGHT_HOR = new THREE.Color(0x2b3956), DAWN_TOP = new THREE.Color(0x24375c), DAWN_HOR = new THREE.Color(0xf2a36e);
 const CLOUD_NIGHT = new THREE.Color(0x2a3246), CLOUD_DAWN = new THREE.Color(0xf3d2c0);
@@ -1745,7 +1898,7 @@ function render(dt, t) {
   // Sisyphus: walk, wind up, punch, guard; turns to follow the road
   const c = P.charging ? P.charge : 0;
   P.release = Math.max(0, P.release - dt * 3.2);
-  poseFigure(dt, t, mode === 'play' ? (P.speedNow || speedNow()) : 0);
+  poseFigure(dt, t, mode === 'play' ? (P.speedNow || speedNow()) : mode === 'summit' ? sumFx.walk : 0);
   const g = P.group;
   g.position.copy(P.p);
   P.yaw = lerp(P.yaw, -Math.atan(xcp(P.d)) - clamp((P.toff - P.off) * .04, -.25, .25), 1 - Math.exp(-8 * dt));
@@ -1808,24 +1961,38 @@ function render(dt, t) {
   camera.position.set(cam.x + rnd(-1, 1) * sh, cam.y + rnd(-1, 1) * sh, cam.z);
   lookAt.set(cam.lookX, cam.lookY, -(P.d + ahead));
   camera.lookAt(lookAt);
+  if (mode === 'summit' && temple) { // a slow orbit around the temple at sunrise
+    const D = summitD(), c = new THREE.Vector3(xc(D + 16), temple.userData.altarY, -(D + 16));
+    const a = sumFx.phase === 0 ? lerp(.15, 1.25, smooth(0, 5, sumFx.t)) : lerp(1.25, 2.95, smooth(0, 3.2, sumFx.t));
+    const rad = sumFx.phase === 2 ? lerp(24, 30, smooth(0, 4, sumFx.t)) : 22;
+    if (sumFx.phase === 2 && sumFx.t > .6) { camT.set(c.x + 7, c.y + 19 + smooth(.6, 4, sumFx.t) * 9, c.z + 9); lookT.copy(ball.p); }
+    else { camT.set(c.x + Math.sin(a) * rad * .9, c.y + 10, c.z + Math.cos(a) * rad * .9); lookT.copy(c); }
+    cine.pos.lerp(camT, 1 - Math.exp(-2.5 * dt)); cine.look.lerp(lookT, 1 - Math.exp(-4 * dt));
+    camera.position.copy(cine.pos); camera.lookAt(cine.look);
+  } else if (mode === 'fall') { // the camera lifts away and watches the boulder roll all the way back down
+    const bd = -ball.p.z, k = smooth(0, 3, S.fallT);
+    camT.set(ball.p.x + 6, Math.max(ball.p.y, H(bd) - 2) + 10 + k * 22, ball.p.z - 16 - k * 14);
+    lookT.set(ball.p.x, Math.max(ball.p.y, H(bd) - 6), ball.p.z);
+    cine.pos.lerp(camT, 1 - Math.exp(-2.2 * dt)); cine.look.lerp(lookT, 1 - Math.exp(-5 * dt));
+    camera.position.copy(cine.pos); camera.lookAt(cine.look);
+  }
   if (window.__camOverride) { const o = window.__camOverride; camera.position.set(P.p.x + o[0], P.p.y + o[1], P.p.z + o[2]); camera.lookAt(P.p.x, P.p.y + o[3], P.p.z); }
   // the climb: dawn comes up as you gain height, the clouds end up below you, the ranges fall away
-  const alt = camera.position.y, dawn = smooth(20, 300, alt);
+  const alt = camera.position.y, dawn = Math.max(smooth(.08, 1, alt / Math.max(60, H(summitD()))), sumFx.dawn);
   skyUni.top.value.copy(NIGHT_TOP).lerp(DAWN_TOP, dawn);
   skyUni.horizon.value.copy(NIGHT_HOR).lerp(DAWN_HOR, dawn);
   skyUni.dawn.value = dawn;
   skyGroup.position.copy(camera.position);
   skyUni.sunDir.value.set(.62, lerp(-.08, .16, dawn), -1).normalize();
   sunDisc.position.copy(skyUni.sunDir.value).multiplyScalar(2600);
-  sunDisc.material.opacity = smooth(.1, .4, dawn);
+  sunDisc.material.opacity = smooth(.1, .4, dawn) * .7;
   stars.material.opacity = .8 * (1 - smooth(.2, .75, dawn));
   sun.color.copy(MOON_COL).lerp(SUN_COL, dawn); sun.intensity = 1.9 + dawn * .8;
   sun.position.set(camera.position.x - 16, camera.position.y + 24 - dawn * 8, camera.position.z + 16 - dawn * 10); // key light from behind the camera so his back and the road get real shading
   sun.target.position.set(camera.position.x, camera.position.y - 5, camera.position.z - 16);
   hemi.color.copy(HEMI_NIGHT).lerp(HEMI_DAWN, dawn * .6); hemi.intensity = .75 + dawn * .35;
   far.position.set(camera.position.x, 0, camera.position.z);
-  summit.material.emissive.copy(skyUni.horizon.value).multiplyScalar(.16 + dawn * .14);
-  summit.userData.beacon.material.opacity = .75 + Math.sin(t * 7.3) * .08 + Math.sin(t * 11.1) * .06;
+  massifMat.emissive.copy(skyUni.horizon.value).multiplyScalar(.14 + dawn * .14);
   farMat.emissive.copy(skyUni.horizon.value).multiplyScalar(.12 + dawn * .1);
   const cloudNear = 1 - smooth(6, 26, Math.abs(alt - CFG.cloudY));   // in the cloud layer
   // once you're through the clouds they stay a little below you: a sea of cloud to the right of the road
@@ -1838,13 +2005,15 @@ function render(dt, t) {
   });
   fogCol.copy(skyUni.horizon.value).lerp(HAZE, .55 + dawn * .15).multiplyScalar(.75 + dawn * .2).lerp(clouds[0].material.color, cloudNear * .8);
   scene.fog.color.copy(fogCol);
-  { const u = summit.userData.uni; u.uAlt.value = alt; u.hazeCol.value.copy(fogCol); u.hazeMin.value = cloudNear * .97; }
+  massifUni.uAlt.value = alt; massifUni.uPd.value = mode === 'fall' ? Math.min(P.d, -ball.p.z) : P.d; massifUni.hazeCol.value.copy(fogCol); massifUni.hazeMin.value = cloudNear * .97;
   scene.fog.near = lerp(30, 4, cloudNear); scene.fog.far = lerp(190 + dawn * 120, 55, cloudNear);
   for (let i = flames.length - 1; i >= 0; i--) {
     const f = flames[i]; if (!f.parent || !f.parent.parent || !f.parent.parent.parent) { flames.splice(i, 1); continue; }
     const u = f.userData, n = Math.sin(t * 13 + u.ph) * .5 + Math.sin(t * 23.7 + u.ph * 2) * .3 + Math.sin(t * 5.1 + u.ph) * .2;
     u.s0.scale.set(1.3 + n * .12, 2.1 + n * .35, 1); u.s1.scale.set(.8 - n * .06, 1.4 + n * .25, 1); u.s0.position.x = n * .05;
   }
+  beacon.children[1].scale.set(7 + Math.sin(t * 9) * .6, 12 + Math.sin(t * 13.7) * 1.4, 1); { const D = summitD(), by = H(D + 16) + 12, bdist = Math.hypot(camera.position.x - beacon.position.x, camera.position.z - beacon.position.z), bf = smooth(60, 260, bdist);
+    beacon.position.y = by + (by - camera.position.y) * 1.5 * smooth(220, 1300, bdist); beaconMats[0].opacity = (.8 + Math.sin(t * 7.3) * .1) * bf; beaconMats[1].opacity = bf; }
   haloMats.forEach((m, i) => { m.opacity = .35 + .65 * Math.pow(.5 + .5 * Math.sin(t * 3.1 + i * 2), 4); m.rotation = t * .6; });
   const blink = (Math.sin(t * 6) > 0) ? 1 : .15;
   for (let i = blinkers.length - 1; i >= 0; i--) { const b = blinkers[i]; if (!b.parent || !b.parent.parent) { blinkers.splice(i, 1); continue; } b.material.opacity = blink; }
@@ -1925,11 +2094,18 @@ function frame(now) {
     render(dt * scale, now / 1000);
   } else {
     if (mode === 'title') { ball.p.y = G(-ball.p.z, ball.p.x) + ball.r; ball.v.set(0, 0, 0); }
+    else if (mode === 'summit') { stepSummit(dt); updateChunks(P.d); hud(); }
+    else if (mode === 'fall') {
+      S.fallT += dt; acc += dt; let n = 0; while (acc >= FIXED && n++ < 8) { stepSphere(ball, FIXED, false); acc -= FIXED; }
+      updateChunks(Math.max(0, Math.min(P.d, -ball.p.z)));
+      $('#fallCount').textContent = Math.round(S.fallFrom * (1 - smooth(.5, 3.4, S.fallT))) + ' m';
+      if (S.fallT > 4.3) { $('#fallCount').classList.remove('on'); gameOver(); }
+    }
     else if (mode === 'over') { acc += dt; let n = 0; while (acc >= FIXED && n++ < 8) { stepSphere(ball, FIXED, false); acc -= FIXED; } }
     doWork(4);
-    render(mode === 'perk' ? 0 : dt, now / 1000);
+    render(mode === 'perk' || mode === 'charon' ? 0 : dt, now / 1000);
   }
   composer.render();
 }
 requestAnimationFrame(frame);
-window.__summit = { gapsFor, openGap, buildChunk, buildStage, far, clouds, scene, S, P, ball, CFG, H, G, xc, inGap, offerPerks, start, strike, update, takePerk, get mode() { return mode; }, get perkChoices() { return perkChoices; }, ballGap, reachNow, doWork };
+window.__summit = { beginSummit, beginFall, offerCharon, payCharon, nextMountain, summitD, nStages, mountainDef, get MT() { return MT; }, sumFx, temple: () => temple, bolts, gapsFor, openGap, buildChunk, buildStage, far, clouds, scene, S, P, ball, CFG, H, G, xc, inGap, offerPerks, start, strike, update, takePerk, get mode() { return mode; }, get perkChoices() { return perkChoices; }, ballGap, reachNow, doWork };

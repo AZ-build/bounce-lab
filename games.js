@@ -143,13 +143,13 @@ window.BOUNCE_LAB_GAMES = [
   {
     "id": "summit",
     "title": "Summit",
-    "tagline": "Punch the boulder up an endless mountain",
-    "description": "Sisyphus is bored. The marble statue trudges up an endless mountain road punching a giant boulder ahead of him, blocking it when it rolls back, and leaping crevasses. Cross old marble bridges, launch off rock shelves, pass through ancient gateways and climb through the clouds toward the summit.",
+    "tagline": "Punch one boulder to the summit",
+    "description": "Sisyphus has one boulder and a chain of mountains: Acrocorinth, Parnassus, Olympus, then the hills of Tartarus. Punch it up to the temple on each summit at sunrise, dodge Zeus's lightning, and pay Charon if you lose it. Your score is how high you climb.",
     "controls": "Hold anywhere to wind up, slide to steer, let go to punch",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v8",
-    "versionName": "The Path",
+    "version": "v9",
+    "versionName": "The Summits",
     "added": "2026-11-22",
     "updated": "2026-11-23",
     "status": "prototype",
@@ -193,6 +193,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v8",
         "name": "The Path",
         "file": "versions/v8.html"
+      },
+      {
+        "v": "v9",
+        "name": "The Summits",
+        "file": "versions/v9.html"
       }
     ]
   }

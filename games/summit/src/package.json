@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs lab ../index.html && node build.mjs plain ../versions/v8.html"
+    "build": "node build.mjs lab ../index.html && node build.mjs plain ../versions/v9.html"
   },
   "devDependencies": {
     "three": "^0.187.0",

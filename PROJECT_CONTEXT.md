@@ -14,7 +14,7 @@
 | bouncer | Bouncer | v6 Evolving | v1–v6 | Session 1: side-scroller, two thumb-locked platforms |
 | rebound | Smashball (was Rebound) | v4 Goal | v1–v4 | Session 2: 3D striker. v4 (Session 5) rebuilt from source: 1v1 vs a bot, ball cam, tap = jump + smash, goal celebration |
 | ascent | Ascent | v5 Clutch slow-mo | v1–v5 | Session 3: vertical scroller, curved pad, clutch slow-mo |
-| summit | Summit | v7 The Old Road | v1–v7 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
+| summit | Summit | v8 The Path | v1–v8 | Session 4: evolution of Rebound. Sisyphus figure punches the boulder; one-finger hold/slide/release; mountain road; camp perks |
 
 ## How a game plugs in
 - One script tag: `<script src="../../lab/lab.js" data-game="<id>" data-version="vN">`
@@ -58,15 +58,16 @@ Bump the `?v=` number on script tags in index.html, admin/index.html and games/*
 - Every new version: keep the old file in `versions/`, update `games.js`
 - Phone-first; lab UI stops touches from reaching the game
 
-## Summit notes (v7)
-- Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v7.html (change the version file name in package.json for each new version). Older versions in versions/ are frozen archives
+## Summit notes (v8)
+- Source: `games/summit/src/` (main.js, template.html, build.mjs). `npm install && npm run build` there writes ../index.html and ../versions/v8.html (change the version file name in package.json for each new version). Older versions in versions/ are frozen archives
 - Tuning: `CFG` (gravity, boulder size/mass, crawler size, drive speed per stage, charge time, throw power range, reach, cloud height) and `STAGES` at the top of main.js. Advantages are in `PERKS`
 - The road: `H(d)` road height at distance d (d = -z), `xc(d)` winding centre line, `G(d, x)` ground anywhere (banked road, `cliffY` on the left, `dropY` berm + drop on the right, ridge drop-off in Ridge stages). Crevasses from `gapsFor(stage)` (seeded; a landing ledge follows each gap)
 - Sisyphus body (v6): sculpted in `sdfbody.mjs` from blended ellipsoids/round cones (a "signed distance field"), turned into a mesh with surface nets, skin-weighted to bones `BONES` (hips, spine, head, sh±1, el±1, hip±1, knee±1, ankle±1). `pack.mjs` compresses it; `build.mjs` injects it as `BODY_DATA`, and main.js decodes it into a `THREE.SkinnedMesh`. Editing sdfbody.mjs means rebuilding with build.mjs (the body is NOT computed in the browser). Hair, beard, laurel, drapery, belt, cestus, bracer and sandals are separate pieces attached to bones. Marble uses a fresnel rim via `onBeforeCompile`
 - Animation: `poseFigure()` blends walk gait / coil (`P.coil` follows `P.charge`) / timed punch (`P.punchT` 0→.55 s, hips → shoulders → arm, lunge) / guard / block / bonk (`P.bonk`) / cheer / leap tuck (`P.air`). Collision is an upright capsule (`CFG.bodyR`, `CFG.bodyH`)
-- Gaps (v6): each gap from `gapsFor()` has a bridge (`b0..b1`, offsets from the road centre) and a launch ramp (`r0..r1`, `RAMP_L`, `RAMP_H`). Use `openGap(d, x)` (not `inGap`) to ask "would you fall here?"
+- Gaps (v6): each gap from `gapsFor()` has a bridge (`b0..b1`, offsets from the road centre) and a launch ramp (`r0..r1`, `RAMP_L`, `RAMP_H`). Since v8 a gap has a bridge OR a ramp (the unused one is 0..0). Use `openGap(d, x)` (not `inGap`) to ask "would you fall here?"
 - Theme (v7): everything is ancient Greek, no lab props. Shared pieces: `COL_SHAFT` (fluted column), `COL_CAP`, `BLOCK_GEO` (rough stone block), `brazier()` (fire sprites animated via `flames`), `cairn()`; materials `marbleStoneMat`, `oldStoneMat`, `bronzeMat`, `rampRockMat`. Camps = `buildCamp()` gateway with `friezeTex(k)`; moving blocks = `buildGate()`; coins = `makeCell()` (still called cells in code, `CELL` tiers). Fire is sprites only (never add lights)
 - Summit (v7): `summit` is one ridge heightfield in `far` (moves with the camera). `shape(x,z)` returns height plus a weight `aw`; the shader adds `uAlt * aw` so the ridge's foot stays level with the player and the peak stays put. Lower slopes are hazed toward the fog colour (`hazeCol`, `hazeMin` = in-cloud)
+- Power meter (v8): `#power` DOM bar positioned each frame over his head (projected `P.p + 4.3`); `#touch` is only a faint finger ring. The summit path is a ribbon in the `summit` IIFE using the same ridge shader (`ridgeMat`)
 - Ground texture: `groundTextures()` makes a tiling gravel colour map plus normal map at startup
 - Controls: one pointer; `pointerdown` → `beginCharge()`, move → steer `P.toff`, `pointerup` → `endCharge()` → `strike()`. Holding when the boulder arrives = block
 - Performance rules: never add/remove lights at runtime; reuse shared geometries (`SHARED_GEOS` are never disposed); new world pieces go through `queue()` / `doWork()`; new object types should be added to the warm-up block so their shaders compile behind the title screen

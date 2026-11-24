@@ -1,4 +1,4 @@
-// SUMMIT v7 "The Old Road" — a Sisyphus game for Bounce Lab.
+// SUMMIT v8 "The Path" — a Sisyphus game for Bounce Lab.
 // Sisyphus is bored. He rides a tracked lab crawler with a sledgehammer arm up an
 // endless mountain road, hurling a giant boulder ahead and smashing it again when it
 // rolls back. Treeline -> rock -> through the clouds -> snow -> sunrise.
@@ -70,9 +70,11 @@ function gapsFor(k) {
       if (R() < st.gaps) {
         const w = Math.min(7.5, 3.5 + Math.min(k, 8) * .35 + R() * 1.6);
         const hw = st.ridge ? CFG.ridgeHw : CFG.hw, side = R() < .5 ? -1 : 1;
-        // b0..b1: a plank bridge on one side; r0..r1: a launch ramp on the other (offsets from the road centre)
-        const b = [side * (hw - 3.8), side * hw], r = [-side * (hw - .2), -side * 1.3];
-        out.push({ d0: d, d1: d + w, b0: Math.min(...b), b1: Math.max(...b), r0: Math.min(...r), r1: Math.max(...r) });
+        // each gap gets ONE helper: a marble bridge along one edge (b0..b1), or a rock launch ramp (r0..r1). Offsets from the road centre.
+        const gp = { d0: d, d1: d + w, b0: 0, b1: 0, r0: 0, r1: 0 };
+        if (R() < .5) { const b = [side * (hw - 4.6), side * hw]; gp.b0 = Math.min(...b); gp.b1 = Math.max(...b); }
+        else { const rw = Math.min(7, hw * 2 - 2.5), c = (R() * 2 - 1) * (hw - rw / 2 - .4); gp.r0 = c - rw / 2; gp.r1 = c + rw / 2; }
+        out.push(gp);
         d += w + 30 + R() * 14;
       } else d += 18 + R() * 12;
     }
@@ -328,8 +330,7 @@ const summit = (() => {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   g.setAttribute('aw', new THREE.Float32BufferAttribute(aw, 1)); g.setIndex(idx); g.computeVertexNormals();
   const uni = { uAlt: { value: 0 }, hazeCol: { value: new THREE.Color() }, hazeMin: { value: 0 } };
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
-  mat.onBeforeCompile = sh => {
+  const ridgeMat = (hazeK, extra) => { const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false, ...extra }); m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'attribute float aw; uniform float uAlt; varying float vHaze;\n' + sh.vertexShader.replace('#include <begin_vertex>',
       `#include <begin_vertex>
@@ -337,9 +338,32 @@ const summit = (() => {
       float hd = length(position.xz);
       vHaze = max(.14 + .3 * smoothstep(600., 3400., hd), (1. - smoothstep(uAlt - 40., uAlt + 380., transformed.y)) * .74);`);
     sh.fragmentShader = 'uniform vec3 hazeCol; uniform float hazeMin; varying float vHaze;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
-      'gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeCol, max(vHaze, hazeMin));\n#include <dithering_fragment>');
-  };
+      `gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeCol, max(vHaze * ${hazeK.toFixed(2)}, hazeMin));\n#include <dithering_fragment>`);
+  }; return m; };
+  const mat = ridgeMat(1, {});
   const m = new THREE.Mesh(g, mat); m.frustumCulled = false; far.add(m); m.userData.uni = uni;
+  { // the old stone path: it carries on from the end of your road and switchbacks up the ridge to the summit
+    const pts = [], ax = abx / Math.sqrt(L2), az = abz / Math.sqrt(L2), nx = -az, nz = ax, N = 900;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, u = 2.2 * t + 3.8 * t * t;                             // legs get shorter as it steepens (7 switchbacks in all)
+      const leg = Math.floor(u), f = u - leg, sgn = leg % 2 ? -1 : 1, tri = sgn * (1 - 2 * f) * -1;   // zig-zag from side to side
+      const amp = lerp(40, 120, t) * (.7 + .5 * lerp(hash(leg, 3), hash(leg + 1, 3), f)) * smooth(0, .04, t) * (1 - smooth(.9, 1, t)) + 12 * Math.sin(t * 61);
+      const cx = A[0] + abx * t + nx * tri * amp, cz = A[1] + abz * t + nz * tri * amp;
+      pts.push([cx, cz]);
+    }
+    const pos = [], aw = [], cols = [], idx = [], pc = new THREE.Color(0x9a8b74);
+    pts.forEach(([x, z], i) => {
+      const [x0, z0] = pts[Math.max(0, i - 1)], [x1, z1] = pts[Math.min(N, i + 1)], dl = Math.hypot(x1 - x0, z1 - z0) || 1;
+      const ox = -(z1 - z0) / dl, oz = (x1 - x0) / dl, hw = lerp(4, 9, i / N);
+      for (const sd of [-1, 1]) { const vx = x + ox * hw * sd, vz = z + oz * hw * sd, [y, w] = shape(vx, vz); pos.push(vx, y + 2.5, vz); aw.push(w); cols.push(pc.r, pc.g, pc.b); }
+      if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    });
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    pg.setAttribute('aw', new THREE.Float32BufferAttribute(aw, 1)); pg.setIndex(idx);
+    const path = new THREE.Mesh(pg, ridgeMat(.55, { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
+    path.frustumCulled = false; far.add(path); m.userData.path = path;
+  }
   const top = shape(B[0] + 70, B[1] - 40)[0];
   const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: new THREE.Color(1, .55, .25).multiplyScalar(2.2), fog: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   beacon.scale.set(40, 40, 1); beacon.position.set(B[0] + 70, top + 14, B[1] - 40); m.add(beacon); m.userData.beacon = beacon;
@@ -594,7 +618,7 @@ function buildChunk(c) {
       grp.add(ribbon(xs.map(x => [[x, G(ld, x) - 18, -ld], [x, G(ld, x), -ld]]), crevMat));
       if (ld === g.d0) for (const sd of [-1, 1]) { const bx = xc(ld) + sd * (hwAt(ld) + .7); grp.add(cairn(bx, G(ld, bx) - .05, -ld + .6, R)); }
     }
-    { // the bridge: one great slab of old marble laid across, a fallen column along its outer edge
+    if (g.b1 > g.b0) { // the bridge: one great slab of old marble laid across, a fallen column along its outer edge
       const bw = g.b1 - g.b0, cx = xc(mid) + (g.b0 + g.b1) / 2, len = g.d1 - g.d0 + 2.4, outer = Math.sign(g.b0 + g.b1);
       const y0 = G(g.d0, cx), y1 = G(g.d1, cx), ang = Math.atan2(y1 - y0, g.d1 - g.d0), my = (y0 + y1) / 2 + .02;
       const br = new THREE.Group(); br.position.set(cx, my, -mid); br.rotation.x = ang; grp.add(br);
@@ -605,7 +629,7 @@ function buildChunk(c) {
         for (let i = 0; i < 3; i++) { const r = .45 + R() * .5, rk = new THREE.Mesh(ROCKS[(R() * 8) | 0], decoRockMat); rk.scale.setScalar(r); rk.position.set((R() - .5) * bw, -.5, e * (len / 2 - .2 + R() * .6)); br.add(rk); }
       }
     }
-    { // the launch ramp: a tilted shelf of bedrock rising to the near lip
+    if (g.r1 > g.r0) { // the launch ramp: a tilted shelf of bedrock rising to the near lip
       const NI = 6, NK = 9, pos = [], uv = [], idx = [], add = (x, y, z, u, v) => { pos.push(x, y, z); uv.push(u, v); return pos.length / 3 - 1; };
       const top = [], dS = g.d0 - RAMP_L, rough = (a, b) => .5 + .5 * Math.sin(a * 12.9898 + b * 78.233 + g.d0) * Math.cos(a * 4.1 + b * 7.7);
       for (let k = 0; k <= NK; k++) {
@@ -1353,7 +1377,7 @@ const speedNow = () => Math.min(CFG.speedMax, CFG.speed0 + CFG.speedStep * stage
 
 // ---------------------------------------------------------------- input
 let drag = null;
-const touchEl = $('#touch');
+const touchEl = $('#touch'), powerEl = $('#power');
 const isUI = t => t && t.closest && t.closest('.ui');
 function beginCharge() { if (mode !== 'play' || P.stun > 0 || ball.lost) return; P.charging = true; }
 function endCharge() { if (!P.charging) return; P.charging = false; strike(P.charge, false); P.charge = 0; }
@@ -1559,11 +1583,12 @@ function stepTitan(dt) {
   }
   P.p.set(xc(P.d) + P.off, 0, -P.d);
   P.p.y = G(P.d, P.p.x);
+  { const rg = rampAt(P.d, P.off); if (rg) P.p.y += RAMP_H * (P.d - (rg.d0 - RAMP_L)) / RAMP_L; }
   P.air = -1;
   for (const g of gapsFor(stageAt(P.d))) {
     if (P.d < g.d0 - .6 || P.d > g.d1 + .6) continue;
     if (onBridge(g, P.off)) { if (P.d > g.d0 && P.d < g.d1) P.p.y = bridgeY(g, P.d, P.p.x); }
-    else { const t = (P.d - (g.d0 - .6)) / (g.d1 - g.d0 + 1.2); P.p.y = lerp(G(g.d0 - .6, P.p.x), G(g.d1 + .6, P.p.x), t) + (1.1 + (g.d1 - g.d0) * .2) * 4 * t * (1 - t); P.air = t; }
+    else { const t = (P.d - (g.d0 - .6)) / (g.d1 - g.d0 + 1.2); P.p.y = lerp(G(g.d0 - .6, P.p.x) + (P.off > g.r0 && P.off < g.r1 ? RAMP_H * (RAMP_L - .6) / RAMP_L : 0), G(g.d1 + .6, P.p.x), t) + (1.1 + (g.d1 - g.d0) * .2) * 4 * t * (1 - t); P.air = t; }
   }
   P.v.subVectors(P.p, prevP).divideScalar(dt);
   if (P.charging) {
@@ -1737,9 +1762,13 @@ function render(dt, t) {
   reachRing.rotation.set(-Math.PI / 2 + Math.atan(Hp(P.d)), 0, 0);
   reachRing.scale.setScalar(CFG.bodyR + reachNow() + ball.r * .3);
   reachRing.material.opacity = lerp(reachRing.material.opacity, inReach ? .8 : (P.charging ? .3 : .05), .25);
-  touchEl.style.setProperty('--c', P.charge.toFixed(3));
-  touchEl.classList.toggle('reach', inReach);
-  touchEl.classList.toggle('full', P.charge > .97);
+  // power meter above his head (projected to the screen each frame)
+  scrC.copy(P.p).setY(P.p.y + 4.3).project(camera);
+  powerEl.style.transform = `translate(${((scrC.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - scrC.y) / 2 * innerHeight - 6).toFixed(1)}px)`;
+  powerEl.style.setProperty('--c', P.charge.toFixed(3));
+  powerEl.classList.toggle('on', P.charging && mode === 'play');
+  powerEl.classList.toggle('reach', inReach);
+  powerEl.classList.toggle('full', P.charge > .97);
   if (chargeGain) { chargeGain.gain.value = P.charging ? .03 + P.charge * .05 : 0; chargeOsc.frequency.value = 55 + P.charge * 90; }
   const showArc = S.perks.arc && P.charging && !ball.lost && mode === 'play';
   arc.visible = arcLand.visible = !!showArc;

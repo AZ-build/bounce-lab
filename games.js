@@ -148,8 +148,8 @@ window.BOUNCE_LAB_GAMES = [
     "controls": "Hold anywhere to wind up, slide to steer, let go to punch",
     "color": "#ff5226",
     "icon": "peak",
-    "version": "v7",
-    "versionName": "The Old Road",
+    "version": "v8",
+    "versionName": "The Path",
     "added": "2026-11-22",
     "updated": "2026-11-23",
     "status": "prototype",
@@ -188,6 +188,11 @@ window.BOUNCE_LAB_GAMES = [
         "v": "v7",
         "name": "The Old Road",
         "file": "versions/v7.html"
+      },
+      {
+        "v": "v8",
+        "name": "The Path",
+        "file": "versions/v8.html"
       }
     ]
   }

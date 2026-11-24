@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [Summit v8 "The Path"] - 2026-11-23
+- Each crevasse now has ONE helper, never both: either a marble bridge along one edge (now a bit wider) or a wide rock launch ramp. Sisyphus walks up the ramp and leaps from its top
+- An old stone path now switchbacks up the ridge to the summit, so you can see the climb still ahead
+- The power meter moved: it now floats just above Sisyphus's head while you wind up (orange, turning gold when full, glowing when the boulder is in reach) instead of under your thumb. The finger marker is now just a faint ring
+- v7 kept at versions/v7.html
+
 ## [Summit v7 "The Old Road"] - 2026-11-23
 - Everything on the mountain now belongs to ancient Greece instead of a lab:
   - Camps are marble gateways: two fluted Doric columns, a lintel carved with the camp number in Roman numerals, a pediment on top, a bronze fire-bowl burning beside each one, and a worn marble threshold across the road

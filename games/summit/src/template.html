@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bounce Lab">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Summit v7 · Sisyphus</title>
+<title>Summit v8 · Sisyphus</title>
 <style>
   :root { --accent: #3ef6ff; --gold: #ffc23a; --hot: #ff8a3a; --steel: #c9d2de; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,16 +50,21 @@
   .pop.bad { font-size: 17px; color: #ff7a5c; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,90,60,.8); }
   .pop.dim { font-size: 13px; color: rgba(255,255,255,.6); text-shadow: none; letter-spacing: 2px; }
 
-  /* the touch ring: shows where your finger is and fills up as you wind up */
-  #touch { position: fixed; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .15s; --c: 0; }
-  #touch::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
-    background: conic-gradient(var(--hot) calc(var(--c) * 360deg), rgba(255,255,255,.18) 0);
-    -webkit-mask: radial-gradient(circle, transparent 31px, #000 32px, #000 37px, transparent 38px); mask: radial-gradient(circle, transparent 31px, #000 32px, #000 37px, transparent 38px); }
-  #touch::after { content: ""; position: absolute; inset: 14px; border-radius: 50%; background: radial-gradient(circle, rgba(255,170,90,calc(.1 + var(--c) * .35)), rgba(255,170,90,0) 70%); }
+  /* where your finger is: just a faint ring (the power meter lives above Sisyphus, where your thumb can't hide it) */
+  #touch { position: fixed; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .15s;
+    border: 2px solid rgba(255,235,200,.35); box-shadow: 0 0 14px rgba(255,170,90,.25); }
   #touch.on { opacity: 1; }
-  #touch.reach::before { filter: drop-shadow(0 0 6px var(--gold)); background: conic-gradient(var(--gold) calc(var(--c) * 360deg), rgba(255,220,140,.35) 0); }
-  #touch.full { animation: fullpulse .25s ease-in-out infinite alternate; }
+  /* the power meter: floats just above his head while you wind up */
+  #power { position: fixed; left: 0; top: 0; width: 96px; height: 11px; margin-left: -48px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .12s;
+    background: rgba(20,16,12,.55); border: 1.5px solid rgba(255,235,200,.55); box-shadow: 0 2px 8px rgba(0,0,0,.5); overflow: hidden; --c: 0; }
+  #power::before { content: ""; position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--c));
+    background: linear-gradient(90deg, #c2531c, var(--hot) 55%, var(--gold)); }
+  #power.on { opacity: 1; }
+  #power.reach { border-color: var(--gold); box-shadow: 0 0 10px var(--gold), 0 2px 8px rgba(0,0,0,.5); }
+  #power.full { animation: powpulse .22s ease-in-out infinite alternate; }
+  #power.full::before { background: linear-gradient(90deg, var(--gold), #fff3c4); }
   @keyframes fullpulse { to { transform: scale(1.08); } }
+  @keyframes powpulse { to { filter: brightness(1.45); } }
 
   /* smack button */
   #smackBtn { position: fixed; right: calc(env(safe-area-inset-right) + 20px); bottom: calc(env(safe-area-inset-bottom) + 28px); width: 92px; height: 92px; border-radius: 50%;
@@ -138,7 +143,7 @@
   <div id="hudR"><div id="lives"></div><button id="mute" class="ui" aria-label="Sound">🔊</button></div>
 </div>
 <div id="banner"><div id="bTitle"></div><div id="bSub"></div></div>
-<div id="touch"></div>
+<div id="touch"></div><div id="power"></div>
 
 <div id="perkChips"></div>
 <div id="perks" class="ui hide">
@@ -149,7 +154,7 @@
 
 <div id="title" class="screen ui">
   <div class="logo">SUMMIT</div>
-  <div class="tag">v7 · sisyphus</div>
+  <div class="tag">v8 · sisyphus</div>
   <div class="how">
     <div>Sisyphus is bored. He never stops climbing.</div>
     <div><b>Hold</b> anywhere to wind up a punch</div>

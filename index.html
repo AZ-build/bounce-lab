@@ -119,6 +119,13 @@ body.modal #scrim{opacity:1;pointer-events:auto}
 /* game card */
 .ch{display:flex;align-items:center;gap:18px;padding-right:40px}
 .orb{width:58px;height:58px;border-radius:50%;flex:none;box-shadow:0 0 22px color-mix(in srgb,var(--c) 55%,transparent),0 10px 24px rgba(0,0,0,.7)}
+.ic{position:relative;flex:none;display:grid;place-items:center}
+.ic .gi{position:absolute;inset:0;width:100%;height:100%;border-radius:22%;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 0 18px color-mix(in srgb,var(--c) 45%,transparent),0 10px 22px rgba(0,0,0,.7)}
+.ic .gi{opacity:0;transition:opacity .2s}
+.ic.has .gi{opacity:1}
+.ic.has .orb{visibility:hidden}
+.ch .ic{width:64px;height:64px}
+.gc .ic{width:52px;height:52px}
 .ch h2{--n:var(--c);font:400 36px/1 var(--sign)}
 .ch .new{display:inline-block;vertical-align:middle;margin-left:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--gd);color:var(--gd);font:700 11px/1.2 var(--f);letter-spacing:.14em;text-transform:uppercase;text-shadow:none;box-shadow:0 0 10px rgba(255,194,58,.35);position:relative;top:-5px}
 .ch p{margin-top:7px;color:var(--soft);font-size:15px}
@@ -212,7 +219,7 @@ details.old p{margin:10px 0 8px}
 <section id="card" class="sheet" role="dialog" aria-modal="true" aria-labelledby="cTitle">
   <button class="x" aria-label="Close"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   <div class="scroll">
-    <div class="ch"><canvas class="orb" id="cOrb"></canvas><div><h2 id="cTitle" class="neon"></h2><p id="cTag"></p></div></div>
+    <div class="ch"><span class="ic" id="cIc"><canvas class="orb" id="cOrb"></canvas><img class="gi" id="cImg" alt=""></span><div><h2 id="cTitle" class="neon"></h2><p id="cTag"></p></div></div>
     <p class="desc" id="cDesc"></p>
     <p class="how" id="cCtl"><svg class="i" viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5a6.5 6.5 0 0 1-6.5 6.5h-.6a6 6 0 0 1-4.8-2.4L4.4 15a1.5 1.5 0 0 1 2.3-1.9L9 15.5"/></svg><span></span></p>
     <div class="acts">
@@ -1293,6 +1300,17 @@ $('#bShare').addEventListener('click', () => shareIt({ title: 'Bounce Lab', text
 // Kept deliberately short: what it is, how to play, Play. Scores, rating and old versions sit quietly below.
 let cur = null;
 // Paint the real 3D ball into a card's little canvas.
+// Each game's home-screen icon (games/<id>/icons/, made by tools/make_game_icons.py).
+// If a game has no icon yet, its chrome orb shows instead.
+const ICON_V = 4;
+function setIcon(wrap, g) {
+  const img = wrap.querySelector('img.gi');
+  wrap.classList.remove('has');
+  img.onload = () => wrap.classList.add('has');
+  img.onerror = () => { wrap.classList.remove('has'); img.removeAttribute('src'); img.style.display = 'none'; };
+  img.style.display = '';
+  img.src = 'games/' + encodeURIComponent(g.id) + '/icons/icon-192.png?v=' + ICON_V;
+}
 function paintOrb(el, b) {
   const css = el.clientWidth || 58; el.width = el.height = Math.round(css * DPR);
   const g = el.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, css, css);
@@ -1320,7 +1338,7 @@ function openCard(b) {
   paintCardStars(mine); $('#cNote').classList.toggle('on', !!mine);
   $('#cMeta').innerHTML = '';
   $('#cLb').innerHTML = ''; $('#cLbMsg').textContent = 'Loading…';
-  $('#list').classList.remove('on'); openSheet(card); paintOrb($('#cOrb'), b);
+  $('#list').classList.remove('on'); openSheet(card); paintOrb($('#cOrb'), b); setIcon($('#cIc'), g);
   try { history.replaceState(null, '', '#' + g.id); } catch (e) {}
   S.track('lobby/card-' + g.id, 'Lobby: opened ' + g.title);
   S.summary(g.id).then(s => {
@@ -1381,9 +1399,9 @@ addEventListener('pageshow', e => { if (e.persisted) { $('#wipe').style.clipPath
 
 // ---------- list view ----------
 $('#bList').addEventListener('click', () => {
-  $('#lItems').innerHTML = GAMES.map(g => `<div class="gc" style="--c:${esc(g.color)}" data-id="${esc(g.id)}" role="button" tabindex="0"><canvas class="orb"></canvas><span class="t"><b>${esc(g.title)}</b><small>${esc(g.tagline || '')}</small></span><button class="go">Play</button></div>`).join('') || '<p class="muted">No games yet.</p>';
+  $('#lItems').innerHTML = GAMES.map(g => `<div class="gc" style="--c:${esc(g.color)}" data-id="${esc(g.id)}" role="button" tabindex="0"><span class="ic"><canvas class="orb"></canvas><img class="gi" alt=""></span><span class="t"><b>${esc(g.title)}</b><small>${esc(g.tagline || '')}</small></span><button class="go">Play</button></div>`).join('') || '<p class="muted">No games yet.</p>';
   openSheet($('#list'));
-  $('#lItems').querySelectorAll('.gc').forEach(el => { const b = balls.find(x => x.game && x.game.id === el.dataset.id); if (b) paintOrb(el.querySelector('canvas.orb'), b); });
+  $('#lItems').querySelectorAll('.gc').forEach(el => { const b = balls.find(x => x.game && x.game.id === el.dataset.id); if (b) paintOrb(el.querySelector('canvas.orb'), b); setIcon(el.querySelector('.ic'), b ? b.game : { id: el.dataset.id }); });
 });
 $('#lItems').addEventListener('click', e => {
   const el = e.target.closest('.gc'); if (!el) return;

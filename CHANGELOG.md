@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [Bounce Lab 1.14.1: game icons in the All games menu] - 2026-11-24
+- The All games list and the game card that opens from it now show each game's new icon instead of the small chrome orb
+- A game without an icon yet (before `tools/make_game_icons.py` has run for it) still shows its orb
+- `ICON_V` in index.html matches the one in the icon script; bump both when the art changes
+
 ## [Bounce Lab 1.14: every game has its own home-screen icon] - 2026-11-24
 - New icons for Bouncer, Smashball, Ascent and Summit, drawn in the lab's look (dark concrete wall, steel, neon) with each game's own colour and one signature element:
   - Bouncer: two steel platforms and a sharp bounce trail (cyan)

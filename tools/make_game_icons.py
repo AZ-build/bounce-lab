@@ -20,7 +20,7 @@ import json, math, re, subprocess, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ICON_V = 4  # bump when the icons change, so phones fetch the new ones
+ICON_V = 4  # bump when the icons change, so phones fetch the new ones (also ICON_V in index.html)
 
 # ---------------------------------------------------------------- shared parts
 
